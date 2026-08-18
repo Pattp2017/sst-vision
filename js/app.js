@@ -228,23 +228,21 @@ previewContainer
 
 // Cria um marcador para cada achado
 console.log("ACHADOS RECEBIDOS:", analise.achados);
-analise.achados.forEach((achado) => {
+marcador.title = achado.titulo;
 
-  if (!achado.posicao) {
-    return;
-  }
+marcador.addEventListener("click", () => {
+  exibirMensagem(
+    `${achado.id} — ${achado.titulo}
 
-  const marcador = document.createElement("div");
+Observado: ${achado.observado}
 
-  marcador.className = "marcador-risco";
-  marcador.textContent = achado.id;
+Possível risco: ${achado.possivel_risco}
 
-  marcador.style.left = `${achado.posicao.x}%`;
-  marcador.style.top = `${achado.posicao.y}%`;
+Confiança: ${achado.confianca}`
+  );
+});
 
-  marcador.title = achado.titulo;
-
-  previewContainer.appendChild(marcador);
+previewContainer.appendChild(marcador);
 });
 
 exibirMensagem(
