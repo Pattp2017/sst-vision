@@ -60,34 +60,33 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request).then((respostaCache) => {
-      if (respostaCache) {
-        return respostaCache;
+  fetch(event.request)
+    .then((respostaRede) => {
+      if (
+        respostaRede &&
+        respostaRede.status === 200 &&
+        respostaRede.type !== "opaque"
+      ) {
+        const respostaClone = respostaRede.clone();
+
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, respostaClone);
+        });
       }
 
-      return fetch(event.request)
-        .then((respostaRede) => {
-          if (
-            !respostaRede ||
-            respostaRede.status !== 200 ||
-            respostaRede.type === "opaque"
-          ) {
-            return respostaRede;
-          }
-
-          const respostaClone = respostaRede.clone();
-
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, respostaClone);
-          });
-
-          return respostaRede;
-        })
-        .catch(() => {
-          if (event.request.mode === "navigate") {
-            return caches.match("./index.html");
-          }
-        });
+      return respostaRede;
     })
-  );
+    .catch(() => {
+      return caches.match(event.request).then((respostaCache) => {
+        if (respostaCache) {
+          return respostaCache;
+        }
+
+        if (event.request.mode === "navigate") {
+          return caches.match("./index.html");
+        }
+      });
+    })
+);
+  
 });
