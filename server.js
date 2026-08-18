@@ -70,32 +70,53 @@ const respostaIA = await ai.models.generateContent({
           text: `
 Você está auxiliando em uma inspeção visual de Segurança e Saúde no Trabalho (SST).
 
-Analise exclusivamente o que é visível na fotografia.
+Analise exclusivamente o que estiver visível na fotografia.
 
-Responda em português do Brasil seguindo exatamente esta estrutura:
+Retorne SOMENTE um JSON válido.
+Não use Markdown.
+Não escreva texto antes ou depois do JSON.
 
-IDENTIFICAÇÃO:
-Descreva objetivamente o equipamento, máquina ou ambiente observado.
+Use exatamente esta estrutura:
 
-CONDIÇÕES VISÍVEIS:
-Liste somente condições que podem ser efetivamente observadas na imagem.
+{
+  "identificacao": {
+    "tipo": "maquina | equipamento | ambiente | nao_identificado",
+    "descricao": "descrição objetiva do que foi identificado",
+    "confianca": "baixa | media | alta"
+  },
+  "achados": [
+    {
+      "id": 1,
+      "titulo": "nome curto do achado",
+      "observado": "descrição somente do que é visível",
+      "possivel_risco": "risco relacionado ao que foi observado",
+      "confianca": "baixa | media | alta",
+      "posicao": {
+        "x": 50,
+        "y": 50
+      }
+    }
+  ],
+  "limitacoes": [
+    "informação que não pode ser confirmada somente pela fotografia"
+  ]
+}
 
-POSSÍVEIS RISCOS:
-Indique riscos de SST que possam estar relacionados às condições visíveis.
-Não trate hipótese como fato.
+REGRAS PARA POSIÇÃO:
+- x e y devem ser números inteiros de 0 a 100.
+- x representa a posição horizontal percentual na fotografia.
+- y representa a posição vertical percentual na fotografia.
+- A posição deve indicar aproximadamente o centro visual do achado.
+- Não crie coordenadas para algo que não esteja visível.
 
-NÍVEL DE CONFIANÇA:
-Informe: BAIXO, MÉDIO ou ALTO.
-
-LIMITAÇÕES:
-Informe o que não pode ser confirmado somente pela fotografia.
-
-REGRAS:
-- Não invente componentes que não estejam visíveis.
-- Não presuma ausência de proteção se a área correspondente não estiver visível.
+REGRAS DE ANÁLISE:
+- Não invente componentes.
+- Não trate hipótese como fato.
+- Não presuma ausência de proteção quando a região não estiver visível.
 - Não declare conformidade ou não conformidade legal.
-- Não cite normas regulamentadoras nesta etapa.
-- Se a fotografia não permitir avaliação adequada, informe isso claramente.
+- Não cite NR nesta etapa.
+- Se não houver achado visual relevante, retorne "achados": [].
+- Preserve a distinção entre condição observada e possível risco.
 `
         },
         
