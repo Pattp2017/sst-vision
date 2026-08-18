@@ -260,6 +260,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
+  function arquivoParaBase64(arquivo) {
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+
+    leitor.onload = () => {
+      const resultado = leitor.result;
+
+      if (typeof resultado !== "string") {
+        reject(new Error("Falha ao converter a imagem."));
+        return;
+      }
+
+      const base64 = resultado.split(",")[1];
+
+      resolve(base64);
+    };
+
+    leitor.onerror = () => {
+      reject(new Error("Erro ao ler a imagem."));
+    };
+
+    leitor.readAsDataURL(arquivo);
+  });
+}
 
   // -------------------------------------------------------
   // EXIBIR MENSAGEM
