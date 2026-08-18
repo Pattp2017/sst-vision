@@ -1,11 +1,13 @@
-const CACHE_NAME = "sst-vision-v1";
+const CACHE_NAME = "sst-vision-v2";
 
 const ARQUIVOS_CACHE = [
   "./",
   "./index.html",
   "./css/style.css",
   "./js/app.js",
-  "./manifest.json"
+  "./manifest.json",
+  "./assets/icons/icon-192.png",
+  "./assets/icons/icon-512.png"
 ];
 
 // =========================================================
