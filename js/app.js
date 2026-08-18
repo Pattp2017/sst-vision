@@ -294,6 +294,67 @@ exibirMensagem(
 
   }
 
+function comprimirImagem(arquivo, larguraMaxima = 1280, qualidade = 0.8) {
+  return new Promise((resolve, reject) => {
+    const imagem = new Image();
+    const urlImagem = URL.createObjectURL(arquivo);
+
+    imagem.onload = () => {
+      let largura = imagem.width;
+      let altura = imagem.height;
+
+      if (largura > larguraMaxima) {
+        const proporcao = larguraMaxima / largura;
+
+        largura = larguraMaxima;
+        altura = Math.round(altura * proporcao);
+      }
+
+      const canvas = document.createElement("canvas");
+      const contexto = canvas.getContext("2d");
+
+      canvas.width = largura;
+      canvas.height = altura;
+
+      contexto.drawImage(
+        imagem,
+        0,
+        0,
+        largura,
+        altura
+      );
+
+      canvas.toBlob(
+        (blob) => {
+          URL.revokeObjectURL(urlImagem);
+
+          if (!blob) {
+            reject(
+              new Error("Não foi possível comprimir a imagem.")
+            );
+
+            return;
+          }
+
+          resolve(blob);
+        },
+        "image/jpeg",
+        qualidade
+      );
+    };
+
+    imagem.onerror = () => {
+      URL.revokeObjectURL(urlImagem);
+
+      reject(
+        new Error("Não foi possível carregar a imagem.")
+      );
+    };
+
+    imagem.src = urlImagem;
+  });
+}
+  
   function arquivoParaBase64(arquivo) {
   return new Promise((resolve, reject) => {
     const leitor = new FileReader();
