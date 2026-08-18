@@ -99,6 +99,10 @@ document.addEventListener("DOMContentLoaded", () => {
     btnUsarFoto.hidden = false;
 
 
+    // Remove marcadores de análise anterior
+    removerMarcadores();
+
+
     ocultarMensagem();
 
   });
@@ -172,104 +176,336 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // -----------------------------------------------------
-    // FUTURA TELA 2
-    // -----------------------------------------------------
-    //
-    // Aqui entraremos posteriormente com:
-    //
-    // - preparação da imagem
-    // - envio para análise
-    // - identificação do cenário
-    // - possíveis riscos
-    // - abertura da Tela 2
-    //
-    // Por enquanto apenas confirmamos que a Tela 1 funciona.
+    // ENVIO DA IMAGEM PARA ANÁLISE
     // -----------------------------------------------------
 
+    try {
 
-try {
-  exibirMensagem("Enviando imagem para análise...");
+      exibirMensagem("Enviando imagem para análise...");
 
-  const imagemComprimida = await comprimirImagem(fotoSelecionada);
+      const imagemComprimida = await comprimirImagem(
+        fotoSelecionada
+      );
 
-  const imagemBase64 = await arquivoParaBase64(imagemComprimida);
+      const imagemBase64 = await arquivoParaBase64(
+        imagemComprimida
+      );
 
-  const resposta = await fetch(
-    "https://sst-vision.onrender.com/analisar-imagem",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        imagemBase64
-      })
+
+      const resposta = await fetch(
+        "https://sst-vision.onrender.com/analisar-imagem",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            imagemBase64
+          })
+        }
+      );
+
+
+      const dados = await resposta.json();
+
+
+      if (!resposta.ok) {
+
+        throw new Error(
+          dados.mensagem || "Falha ao enviar a imagem."
+        );
+
+      }
+
+
+      // ---------------------------------------------------
+      // INTERPRETAR RETORNO
+      // ---------------------------------------------------
+
+      if (dados.analise) {
+
+        try {
+
+          let analise = dados.analise;
+
+
+          // Caso o servidor ainda devolva JSON como string
+          if (typeof analise === "string") {
+            analise = JSON.parse(analise);
+          }
+
+
+          console.log("Análise SST:", analise);
+
+
+          // ------------------------------------------------
+          // IDENTIFICAÇÃO
+          // ------------------------------------------------
+
+          const descricaoIdentificacao =
+            analise.identificacao?.descricao ||
+            "Cenário não identificado";
+
+
+          // ------------------------------------------------
+          // ACHADOS
+          // ------------------------------------------------
+
+          const achados = Array.isArray(analise.achados)
+            ? analise.achados
+            : [];
+
+
+          console.log(
+            "ACHADOS RECEBIDOS:",
+            achados
+          );
+
+
+          // Remove marcadores antigos
+          removerMarcadores();
+
+
+          // ------------------------------------------------
+          // CRIAR MARCADORES
+          // ------------------------------------------------
+
+          achados.forEach((achado, indice) => {
+
+            criarMarcador(
+              achado,
+              indice
+            );
+
+          });
+
+
+          // ------------------------------------------------
+          // MENSAGEM FINAL
+          // ------------------------------------------------
+
+          if (achados.length > 0) {
+
+            exibirMensagem(
+              `Identificado: ${descricaoIdentificacao} | Achados: ${achados.length}`
+            );
+
+          } else {
+
+            exibirMensagem(
+              `Identificado: ${descricaoIdentificacao} | Nenhum achado marcado na imagem.`
+            );
+
+          }
+
+
+        } catch (erro) {
+
+          console.error(
+            "Erro ao interpretar análise:",
+            erro
+          );
+
+          exibirMensagem(
+            "A análise foi recebida, mas não pôde ser interpretada."
+          );
+
+        }
+
+
+      } else {
+
+        exibirMensagem(
+          dados.mensagem ||
+          "Imagem enviada com sucesso."
+        );
+
+      }
+
+
+    } catch (erro) {
+
+      console.error(
+        "Erro ao enviar imagem:",
+        erro
+      );
+
+      exibirMensagem(
+        "Não foi possível enviar a imagem para o servidor."
+      );
+
     }
-  );
-
-  const dados = await resposta.json();
-
-  if (!resposta.ok) {
-    throw new Error(
-      dados.mensagem || "Falha ao enviar a imagem."
-    );
-  }
-
-if (dados.analise) {
-  try {
-const analise = JSON.parse(dados.analise);
-
-console.log("Análise SST:", analise);
-
-// Remove marcadores de uma análise anterior
-previewContainer
-  .querySelectorAll(".marcador-risco")
-  .forEach((marcador) => marcador.remove());
-
-// Cria um marcador para cada achado
-console.log("ACHADOS RECEBIDOS:", analise.achados);
-marcador.title = achado.titulo;
-
-marcador.addEventListener("click", () => {
-  exibirMensagem(
-    `${achado.id} — ${achado.titulo}
-
-Observado: ${achado.observado}
-
-Possível risco: ${achado.possivel_risco}
-
-Confiança: ${achado.confianca}`
-  );
-});
-
-previewContainer.appendChild(marcador);
-});
-
-exibirMensagem(
-  `Identificado: ${analise.identificacao.descricao} | Achados: ${analise.achados.length}`
-);
-  } catch (erro) {
-    console.error("Erro ao interpretar análise:", erro);
-
-    exibirMensagem(
-      "A análise foi recebida, mas não pôde ser interpretada."
-    );
-  }
-} else {
-  exibirMensagem(
-    dados.mensagem || "Imagem enviada com sucesso."
-  );
-}
-
-} catch (erro) {
-  console.error("Erro ao enviar imagem:", erro);
-
-  exibirMensagem(
-    "Não foi possível enviar a imagem para o servidor."
-  );
-}
 
   });
+
+
+  // -------------------------------------------------------
+  // CRIAR MARCADOR DE RISCO
+  // -------------------------------------------------------
+
+  function criarMarcador(achado, indice) {
+
+    const marcador = document.createElement("button");
+
+    marcador.type = "button";
+
+    marcador.className = "marcador-risco";
+
+
+    // -----------------------------------------------------
+    // NUMERAÇÃO
+    // -----------------------------------------------------
+
+    const numero =
+      achado.id !== undefined &&
+      achado.id !== null
+        ? achado.id
+        : indice + 1;
+
+
+    marcador.textContent = numero;
+
+
+    // -----------------------------------------------------
+    // POSIÇÃO
+    // -----------------------------------------------------
+
+    const x = converterCoordenada(
+      achado.x ??
+      achado.posicao?.x ??
+      achado.coordenadas?.x ??
+      50
+    );
+
+
+    const y = converterCoordenada(
+      achado.y ??
+      achado.posicao?.y ??
+      achado.coordenadas?.y ??
+      50
+    );
+
+
+    marcador.style.left = `${x}%`;
+
+    marcador.style.top = `${y}%`;
+
+
+    // -----------------------------------------------------
+    // TÍTULO
+    // -----------------------------------------------------
+
+    marcador.title =
+      achado.titulo ||
+      `Achado ${numero}`;
+
+
+    // -----------------------------------------------------
+    // CLIQUE NO MARCADOR
+    // -----------------------------------------------------
+
+    marcador.addEventListener(
+      "click",
+      (event) => {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+
+        const titulo =
+          achado.titulo ||
+          `Achado ${numero}`;
+
+
+        const observado =
+          achado.observado ||
+          "Não informado";
+
+
+        const risco =
+          achado.possivel_risco ||
+          achado.risco ||
+          "Não informado";
+
+
+        const confianca =
+          achado.confianca ||
+          "Não informada";
+
+
+        exibirMensagem(
+`${numero} — ${titulo}
+
+Observado: ${observado}
+
+Possível risco: ${risco}
+
+Confiança: ${confianca}`
+        );
+
+      }
+    );
+
+
+    previewContainer.appendChild(
+      marcador
+    );
+
+  }
+
+
+  // -------------------------------------------------------
+  // CONVERTER COORDENADA
+  // -------------------------------------------------------
+
+  function converterCoordenada(valor) {
+
+    let numero = Number(valor);
+
+
+    if (!Number.isFinite(numero)) {
+      return 50;
+    }
+
+
+    // Se o backend enviar entre 0 e 1
+    if (numero >= 0 && numero <= 1) {
+      numero = numero * 100;
+    }
+
+
+    // Impede marcador de sair da fotografia
+    if (numero < 0) {
+      numero = 0;
+    }
+
+    if (numero > 100) {
+      numero = 100;
+    }
+
+
+    return numero;
+
+  }
+
+
+  // -------------------------------------------------------
+  // REMOVER MARCADORES
+  // -------------------------------------------------------
+
+  function removerMarcadores() {
+
+    previewContainer
+      .querySelectorAll(".marcador-risco")
+      .forEach((marcador) => {
+
+        marcador.remove();
+
+      });
+
+  }
 
 
   // -------------------------------------------------------
@@ -280,16 +516,19 @@ exibirMensagem(
 
     radio.addEventListener("change", () => {
 
-      const tipoSelecionado = document.querySelector(
-        'input[name="tipoInspecao"]:checked'
-      ).value;
+      const tipoSelecionado =
+        document.querySelector(
+          'input[name="tipoInspecao"]:checked'
+        )?.value;
 
 
       if (tipoSelecionado === "ambiente") {
 
         grupoEquipamento.hidden = true;
 
-        document.getElementById("equipamento").value = "";
+        document.getElementById(
+          "equipamento"
+        ).value = "";
 
       } else {
 
@@ -322,15 +561,21 @@ exibirMensagem(
     }
 
 
+    removerMarcadores();
+
+
     fotoPreview.removeAttribute("src");
 
 
     cameraArea.hidden = false;
+
     previewContainer.hidden = true;
 
 
     btnAbrirCamera.hidden = false;
+
     btnRefazerFoto.hidden = true;
+
     btnUsarFoto.hidden = true;
 
 
@@ -338,91 +583,192 @@ exibirMensagem(
 
   }
 
-function comprimirImagem(arquivo, larguraMaxima = 1280, qualidade = 0.8) {
-  return new Promise((resolve, reject) => {
-    const imagem = new Image();
-    const urlImagem = URL.createObjectURL(arquivo);
 
-    imagem.onload = () => {
-      let largura = imagem.width;
-      let altura = imagem.height;
+  // -------------------------------------------------------
+  // COMPRIMIR IMAGEM
+  // -------------------------------------------------------
 
-      if (largura > larguraMaxima) {
-        const proporcao = larguraMaxima / largura;
+  function comprimirImagem(
+    arquivo,
+    larguraMaxima = 1280,
+    qualidade = 0.8
+  ) {
 
-        largura = larguraMaxima;
-        altura = Math.round(altura * proporcao);
+    return new Promise(
+      (resolve, reject) => {
+
+        const imagem = new Image();
+
+        const urlImagem =
+          URL.createObjectURL(arquivo);
+
+
+        imagem.onload = () => {
+
+          let largura = imagem.width;
+
+          let altura = imagem.height;
+
+
+          if (largura > larguraMaxima) {
+
+            const proporcao =
+              larguraMaxima / largura;
+
+            largura = larguraMaxima;
+
+            altura = Math.round(
+              altura * proporcao
+            );
+
+          }
+
+
+          const canvas =
+            document.createElement(
+              "canvas"
+            );
+
+
+          const contexto =
+            canvas.getContext("2d");
+
+
+          canvas.width = largura;
+
+          canvas.height = altura;
+
+
+          contexto.drawImage(
+            imagem,
+            0,
+            0,
+            largura,
+            altura
+          );
+
+
+          canvas.toBlob(
+            (blob) => {
+
+              URL.revokeObjectURL(
+                urlImagem
+              );
+
+
+              if (!blob) {
+
+                reject(
+                  new Error(
+                    "Não foi possível comprimir a imagem."
+                  )
+                );
+
+                return;
+
+              }
+
+
+              resolve(blob);
+
+            },
+
+            "image/jpeg",
+
+            qualidade
+
+          );
+
+        };
+
+
+        imagem.onerror = () => {
+
+          URL.revokeObjectURL(
+            urlImagem
+          );
+
+
+          reject(
+            new Error(
+              "Não foi possível carregar a imagem."
+            )
+          );
+
+        };
+
+
+        imagem.src = urlImagem;
+
       }
+    );
 
-      const canvas = document.createElement("canvas");
-      const contexto = canvas.getContext("2d");
+  }
 
-      canvas.width = largura;
-      canvas.height = altura;
 
-      contexto.drawImage(
-        imagem,
-        0,
-        0,
-        largura,
-        altura
-      );
+  // -------------------------------------------------------
+  // ARQUIVO PARA BASE64
+  // -------------------------------------------------------
 
-      canvas.toBlob(
-        (blob) => {
-          URL.revokeObjectURL(urlImagem);
+  function arquivoParaBase64(arquivo) {
 
-          if (!blob) {
+    return new Promise(
+      (resolve, reject) => {
+
+        const leitor =
+          new FileReader();
+
+
+        leitor.onload = () => {
+
+          const resultado =
+            leitor.result;
+
+
+          if (
+            typeof resultado !== "string"
+          ) {
+
             reject(
-              new Error("Não foi possível comprimir a imagem.")
+              new Error(
+                "Falha ao converter a imagem."
+              )
             );
 
             return;
+
           }
 
-          resolve(blob);
-        },
-        "image/jpeg",
-        qualidade
-      );
-    };
 
-    imagem.onerror = () => {
-      URL.revokeObjectURL(urlImagem);
+          const base64 =
+            resultado.split(",")[1];
 
-      reject(
-        new Error("Não foi possível carregar a imagem.")
-      );
-    };
 
-    imagem.src = urlImagem;
-  });
-}
-  
-  function arquivoParaBase64(arquivo) {
-  return new Promise((resolve, reject) => {
-    const leitor = new FileReader();
+          resolve(base64);
 
-    leitor.onload = () => {
-      const resultado = leitor.result;
+        };
 
-      if (typeof resultado !== "string") {
-        reject(new Error("Falha ao converter a imagem."));
-        return;
+
+        leitor.onerror = () => {
+
+          reject(
+            new Error(
+              "Erro ao ler a imagem."
+            )
+          );
+
+        };
+
+
+        leitor.readAsDataURL(
+          arquivo
+        );
+
       }
+    );
 
-      const base64 = resultado.split(",")[1];
+  }
 
-      resolve(base64);
-    };
-
-    leitor.onerror = () => {
-      reject(new Error("Erro ao ler a imagem."));
-    };
-
-    leitor.readAsDataURL(arquivo);
-  });
-}
 
   // -------------------------------------------------------
   // EXIBIR MENSAGEM
@@ -462,20 +808,25 @@ function comprimirImagem(arquivo, larguraMaxima = 1280, qualidade = 0.8) {
 
   if ("serviceWorker" in navigator) {
 
-    window.addEventListener("load", () => {
+    window.addEventListener(
+      "load",
+      () => {
 
-      navigator.serviceWorker
-        .register("./service-worker.js")
-        .catch((erro) => {
+        navigator.serviceWorker
+          .register(
+            "./service-worker.js"
+          )
+          .catch((erro) => {
 
-          console.error(
-            "Erro ao registrar Service Worker:",
-            erro
-          );
+            console.error(
+              "Erro ao registrar Service Worker:",
+              erro
+            );
 
-        });
+          });
 
-    });
+      }
+    );
 
   }
 
