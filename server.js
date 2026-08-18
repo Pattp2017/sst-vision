@@ -47,6 +47,31 @@ app.get("/teste-ia", async (req, res) => {
   }
 });
 
+app.post("/analisar-imagem", async (req, res) => {
+  try {
+    const { imagemBase64 } = req.body;
+
+    if (!imagemBase64) {
+      return res.status(400).json({
+        status: "erro",
+        mensagem: "Nenhuma imagem recebida."
+      });
+    }
+
+    return res.json({
+      status: "ok",
+      mensagem: "Imagem recebida pelo backend."
+    });
+  } catch (erro) {
+    console.error("Erro ao receber imagem:", erro);
+
+    return res.status(500).json({
+      status: "erro",
+      mensagem: "Falha ao processar a imagem."
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`SST Vision rodando na porta ${PORT}`);
 });
