@@ -68,18 +68,37 @@ const respostaIA = await ai.models.generateContent({
       parts: [
         {
           text: `
-Observe esta fotografia.
+Você está auxiliando em uma inspeção visual de Segurança e Saúde no Trabalho (SST).
 
-Por enquanto, NÃO faça análise de riscos de SST.
+Analise exclusivamente o que é visível na fotografia.
 
-Responda somente:
-1. O que aparece na imagem.
-2. Se parece ser uma máquina/equipamento ou um ambiente de trabalho.
-3. Seu nível de confiança na identificação: baixo, médio ou alto.
+Responda em português do Brasil seguindo exatamente esta estrutura:
 
-Se não conseguir identificar, diga claramente que não foi possível identificar.
-          `
+IDENTIFICAÇÃO:
+Descreva objetivamente o equipamento, máquina ou ambiente observado.
+
+CONDIÇÕES VISÍVEIS:
+Liste somente condições que podem ser efetivamente observadas na imagem.
+
+POSSÍVEIS RISCOS:
+Indique riscos de SST que possam estar relacionados às condições visíveis.
+Não trate hipótese como fato.
+
+NÍVEL DE CONFIANÇA:
+Informe: BAIXO, MÉDIO ou ALTO.
+
+LIMITAÇÕES:
+Informe o que não pode ser confirmado somente pela fotografia.
+
+REGRAS:
+- Não invente componentes que não estejam visíveis.
+- Não presuma ausência de proteção se a área correspondente não estiver visível.
+- Não declare conformidade ou não conformidade legal.
+- Não cite normas regulamentadoras nesta etapa.
+- Se a fotografia não permitir avaliação adequada, informe isso claramente.
+`
         },
+        
         {
           inlineData: {
             mimeType: "image/jpeg",
