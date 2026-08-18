@@ -1,1 +1,319 @@
+// =========================================================
+// SST VISION
+// Controle da Tela 1 - Nova Inspeção
+// =========================================================
 
+document.addEventListener("DOMContentLoaded", () => {
+
+  // -------------------------------------------------------
+  // ELEMENTOS
+  // -------------------------------------------------------
+
+  const cameraInput = document.getElementById("cameraInput");
+
+  const btnAbrirCamera = document.getElementById("btnAbrirCamera");
+  const btnRefazerFoto = document.getElementById("btnRefazerFoto");
+  const btnUsarFoto = document.getElementById("btnUsarFoto");
+
+  const cameraArea = document.getElementById("cameraArea");
+  const previewContainer = document.getElementById("previewContainer");
+  const fotoPreview = document.getElementById("fotoPreview");
+
+  const grupoEquipamento = document.getElementById("grupoEquipamento");
+
+  const mensagem = document.getElementById("mensagem");
+
+  const tiposInspecao = document.querySelectorAll(
+    'input[name="tipoInspecao"]'
+  );
+
+
+  // -------------------------------------------------------
+  // ESTADO DA FOTO
+  // -------------------------------------------------------
+
+  let fotoSelecionada = null;
+  let fotoURL = null;
+
+
+  // -------------------------------------------------------
+  // ABRIR CÂMERA
+  // -------------------------------------------------------
+
+  btnAbrirCamera.addEventListener("click", () => {
+
+    cameraInput.click();
+
+  });
+
+
+  // -------------------------------------------------------
+  // FOTO SELECIONADA / CAPTURADA
+  // -------------------------------------------------------
+
+  cameraInput.addEventListener("change", (event) => {
+
+    const arquivo = event.target.files[0];
+
+    if (!arquivo) {
+      return;
+    }
+
+    if (!arquivo.type.startsWith("image/")) {
+
+      exibirMensagem(
+        "O arquivo selecionado não é uma imagem."
+      );
+
+      cameraInput.value = "";
+
+      return;
+    }
+
+
+    fotoSelecionada = arquivo;
+
+
+    // Remove URL anterior da memória
+    if (fotoURL) {
+      URL.revokeObjectURL(fotoURL);
+    }
+
+
+    fotoURL = URL.createObjectURL(arquivo);
+
+    fotoPreview.src = fotoURL;
+
+
+    // Esconde placeholder
+    cameraArea.hidden = true;
+
+
+    // Mostra fotografia
+    previewContainer.hidden = false;
+
+
+    // Ajusta botões
+    btnAbrirCamera.hidden = true;
+    btnRefazerFoto.hidden = false;
+    btnUsarFoto.hidden = false;
+
+
+    ocultarMensagem();
+
+  });
+
+
+  // -------------------------------------------------------
+  // TIRAR NOVAMENTE
+  // -------------------------------------------------------
+
+  btnRefazerFoto.addEventListener("click", () => {
+
+    limparFoto();
+
+    cameraInput.click();
+
+  });
+
+
+  // -------------------------------------------------------
+  // USAR FOTO
+  // -------------------------------------------------------
+
+  btnUsarFoto.addEventListener("click", () => {
+
+    const empresa = document
+      .getElementById("empresa")
+      .value
+      .trim();
+
+    const setor = document
+      .getElementById("setor")
+      .value
+      .trim();
+
+
+    if (!empresa) {
+
+      exibirMensagem(
+        "Informe a empresa ou fazenda antes de continuar."
+      );
+
+      document.getElementById("empresa").focus();
+
+      return;
+    }
+
+
+    if (!setor) {
+
+      exibirMensagem(
+        "Informe o local ou setor da inspeção."
+      );
+
+      document.getElementById("setor").focus();
+
+      return;
+    }
+
+
+    if (!fotoSelecionada) {
+
+      exibirMensagem(
+        "Registre uma fotografia antes de continuar."
+      );
+
+      return;
+    }
+
+
+    ocultarMensagem();
+
+
+    // -----------------------------------------------------
+    // FUTURA TELA 2
+    // -----------------------------------------------------
+    //
+    // Aqui entraremos posteriormente com:
+    //
+    // - preparação da imagem
+    // - envio para análise
+    // - identificação do cenário
+    // - possíveis riscos
+    // - abertura da Tela 2
+    //
+    // Por enquanto apenas confirmamos que a Tela 1 funciona.
+    // -----------------------------------------------------
+
+
+    exibirMensagem(
+      "Foto registrada com sucesso. A etapa de análise será adicionada em seguida."
+    );
+
+  });
+
+
+  // -------------------------------------------------------
+  // TIPO DE INSPEÇÃO
+  // -------------------------------------------------------
+
+  tiposInspecao.forEach((radio) => {
+
+    radio.addEventListener("change", () => {
+
+      const tipoSelecionado = document.querySelector(
+        'input[name="tipoInspecao"]:checked'
+      ).value;
+
+
+      if (tipoSelecionado === "ambiente") {
+
+        grupoEquipamento.hidden = true;
+
+        document.getElementById("equipamento").value = "";
+
+      } else {
+
+        grupoEquipamento.hidden = false;
+
+      }
+
+    });
+
+  });
+
+
+  // -------------------------------------------------------
+  // LIMPAR FOTO
+  // -------------------------------------------------------
+
+  function limparFoto() {
+
+    fotoSelecionada = null;
+
+    cameraInput.value = "";
+
+
+    if (fotoURL) {
+
+      URL.revokeObjectURL(fotoURL);
+
+      fotoURL = null;
+
+    }
+
+
+    fotoPreview.removeAttribute("src");
+
+
+    cameraArea.hidden = false;
+    previewContainer.hidden = true;
+
+
+    btnAbrirCamera.hidden = false;
+    btnRefazerFoto.hidden = true;
+    btnUsarFoto.hidden = true;
+
+
+    ocultarMensagem();
+
+  }
+
+
+  // -------------------------------------------------------
+  // EXIBIR MENSAGEM
+  // -------------------------------------------------------
+
+  function exibirMensagem(texto) {
+
+    mensagem.textContent = texto;
+
+    mensagem.hidden = false;
+
+
+    mensagem.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest"
+    });
+
+  }
+
+
+  // -------------------------------------------------------
+  // OCULTAR MENSAGEM
+  // -------------------------------------------------------
+
+  function ocultarMensagem() {
+
+    mensagem.textContent = "";
+
+    mensagem.hidden = true;
+
+  }
+
+
+  // -------------------------------------------------------
+  // SERVICE WORKER
+  // -------------------------------------------------------
+
+  if ("serviceWorker" in navigator) {
+
+    window.addEventListener("load", () => {
+
+      navigator.serviceWorker
+        .register("./service-worker.js")
+        .catch((erro) => {
+
+          console.error(
+            "Erro ao registrar Service Worker:",
+            erro
+          );
+
+        });
+
+    });
+
+  }
+
+});
