@@ -1,1 +1,13 @@
- 
+{
+  "name": "SST Vision",
+  "short_name": "SST Vision",
+  "description": "Inspeção de segurança do trabalho assistida por inteligência artificial.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f7",
+  "theme_color": "#123b5d",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": []
+} 
