@@ -227,6 +227,7 @@ previewContainer
   .forEach((marcador) => marcador.remove());
 
 // Cria um marcador para cada achado
+console.log("ACHADOS RECEBIDOS:", analise.achados);
 analise.achados.forEach((achado) => {
 
   if (!achado.posicao) {
