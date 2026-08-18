@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // USAR FOTO
   // -------------------------------------------------------
 
-  btnUsarFoto.addEventListener("click", () => {
+  btnUsarFoto.addEventListener("click", async () => {
 
     const empresa = document
       .getElementById("empresa")
@@ -187,9 +187,43 @@ document.addEventListener("DOMContentLoaded", () => {
     // -----------------------------------------------------
 
 
-    exibirMensagem(
-      "Foto registrada com sucesso. A etapa de análise será adicionada em seguida."
+try {
+  exibirMensagem("Enviando imagem para análise...");
+
+  const imagemBase64 = await arquivoParaBase64(fotoSelecionada);
+
+  const resposta = await fetch(
+    "https://sst-vision.onrender.com/analisar-imagem",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        imagemBase64
+      })
+    }
+  );
+
+  const dados = await resposta.json();
+
+  if (!resposta.ok) {
+    throw new Error(
+      dados.mensagem || "Falha ao enviar a imagem."
     );
+  }
+
+  exibirMensagem(
+    dados.mensagem || "Imagem enviada com sucesso."
+  );
+
+} catch (erro) {
+  console.error("Erro ao enviar imagem:", erro);
+
+  exibirMensagem(
+    "Não foi possível enviar a imagem para o servidor."
+  );
+}
 
   });
 
