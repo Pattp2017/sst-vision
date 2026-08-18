@@ -215,9 +215,27 @@ try {
     );
   }
 
-exibirMensagem(
-  dados.analise || dados.mensagem || "Imagem enviada com sucesso."
-);
+if (dados.analise) {
+  try {
+    const analise = JSON.parse(dados.analise);
+
+    console.log("Análise SST:", analise);
+
+    exibirMensagem(
+      `Identificado: ${analise.identificacao.descricao}`
+    );
+  } catch (erro) {
+    console.error("Erro ao interpretar análise:", erro);
+
+    exibirMensagem(
+      "A análise foi recebida, mas não pôde ser interpretada."
+    );
+  }
+} else {
+  exibirMensagem(
+    dados.mensagem || "Imagem enviada com sucesso."
+  );
+}
 
 } catch (erro) {
   console.error("Erro ao enviar imagem:", erro);
