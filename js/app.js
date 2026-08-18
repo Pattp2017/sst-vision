@@ -217,13 +217,38 @@ try {
 
 if (dados.analise) {
   try {
-    const analise = JSON.parse(dados.analise);
+const analise = JSON.parse(dados.analise);
 
-    console.log("Análise SST:", analise);
+console.log("Análise SST:", analise);
 
-    exibirMensagem(
-      `Identificado: ${analise.identificacao.descricao}`
-    );
+// Remove marcadores de uma análise anterior
+previewContainer
+  .querySelectorAll(".marcador-risco")
+  .forEach((marcador) => marcador.remove());
+
+// Cria um marcador para cada achado
+analise.achados.forEach((achado) => {
+
+  if (!achado.posicao) {
+    return;
+  }
+
+  const marcador = document.createElement("div");
+
+  marcador.className = "marcador-risco";
+  marcador.textContent = achado.id;
+
+  marcador.style.left = `${achado.posicao.x}%`;
+  marcador.style.top = `${achado.posicao.y}%`;
+
+  marcador.title = achado.titulo;
+
+  previewContainer.appendChild(marcador);
+});
+
+exibirMensagem(
+  `Identificado: ${analise.identificacao.descricao}`
+);
   } catch (erro) {
     console.error("Erro ao interpretar análise:", erro);
 
