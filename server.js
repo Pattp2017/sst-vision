@@ -60,10 +60,41 @@ app.post("/analisar-imagem", async (req, res) => {
       });
     }
 
-    return res.json({
-      status: "ok",
-      mensagem: "Imagem recebida pelo backend."
-    });
+const respostaIA = await ai.models.generateContent({
+  model: "gemini-3.5-flash-lite",
+  contents: [
+    {
+      role: "user",
+      parts: [
+        {
+          text: `
+Observe esta fotografia.
+
+Por enquanto, NÃO faça análise de riscos de SST.
+
+Responda somente:
+1. O que aparece na imagem.
+2. Se parece ser uma máquina/equipamento ou um ambiente de trabalho.
+3. Seu nível de confiança na identificação: baixo, médio ou alto.
+
+Se não conseguir identificar, diga claramente que não foi possível identificar.
+          `
+        },
+        {
+          inlineData: {
+            mimeType: "image/jpeg",
+            data: imagemBase64
+          }
+        }
+      ]
+    }
+  ]
+});
+
+return res.json({
+  status: "ok",
+  analise: respostaIA.text
+});
   } catch (erro) {
     console.error("Erro ao receber imagem:", erro);
 
