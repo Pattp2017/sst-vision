@@ -190,7 +190,9 @@ document.addEventListener("DOMContentLoaded", () => {
 try {
   exibirMensagem("Enviando imagem para análise...");
 
-  const imagemBase64 = await arquivoParaBase64(fotoSelecionada);
+  const imagemComprimida = await comprimirImagem(fotoSelecionada);
+
+  const imagemBase64 = await arquivoParaBase64(imagemComprimida);
 
   const resposta = await fetch(
     "https://sst-vision.onrender.com/analisar-imagem",
