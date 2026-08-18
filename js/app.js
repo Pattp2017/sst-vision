@@ -213,9 +213,9 @@ try {
     );
   }
 
-  exibirMensagem(
-    dados.mensagem || "Imagem enviada com sucesso."
-  );
+exibirMensagem(
+  dados.analise || dados.mensagem || "Imagem enviada com sucesso."
+);
 
 } catch (erro) {
   console.error("Erro ao enviar imagem:", erro);
