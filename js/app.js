@@ -248,7 +248,7 @@ analise.achados.forEach((achado) => {
 });
 
 exibirMensagem(
-  `Identificado: ${analise.identificacao.descricao}`
+  `Identificado: ${analise.identificacao.descricao} | Achados: ${analise.achados.length}`
 );
   } catch (erro) {
     console.error("Erro ao interpretar análise:", erro);
