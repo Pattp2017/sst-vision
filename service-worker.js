@@ -1,4 +1,4 @@
-const CACHE_NAME = "sst-vision-v5";
+const CACHE_NAME = "sst-vision-v6";
 
 const ARQUIVOS_CACHE = [
   "./",
