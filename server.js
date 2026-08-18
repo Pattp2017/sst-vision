@@ -22,6 +22,27 @@ app.get("/", (req, res) => {
   });
 });
 
+app.get("/teste-ia", async (req, res) => {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash-lite",
+      contents: "Responda apenas: SST Vision conectado com sucesso."
+    });
+
+    res.json({
+      status: "ok",
+      resposta: response.text
+    });
+  } catch (erro) {
+    console.error("Erro Gemini:", erro);
+
+    res.status(500).json({
+      status: "erro",
+      mensagem: "Falha ao conectar com a IA."
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`SST Vision rodando na porta ${PORT}`);
 });
