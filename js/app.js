@@ -35,6 +35,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let fotoSelecionada = null;
   let fotoURL = null;
 
+  let analiseAtual = null;
+
 
   // -------------------------------------------------------
   // ABRIR CÂMERA
@@ -59,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+
     if (!arquivo.type.startsWith("image/")) {
 
       exibirMensagem(
@@ -74,9 +77,10 @@ document.addEventListener("DOMContentLoaded", () => {
     fotoSelecionada = arquivo;
 
 
-    // Remove URL anterior da memória
     if (fotoURL) {
+
       URL.revokeObjectURL(fotoURL);
+
     }
 
 
@@ -85,23 +89,21 @@ document.addEventListener("DOMContentLoaded", () => {
     fotoPreview.src = fotoURL;
 
 
-    // Esconde placeholder
     cameraArea.hidden = true;
 
-
-    // Mostra fotografia
     previewContainer.hidden = false;
 
 
-    // Ajusta botões
     btnAbrirCamera.hidden = true;
+
     btnRefazerFoto.hidden = false;
+
     btnUsarFoto.hidden = false;
 
 
-    // Remove marcadores de análise anterior
     removerMarcadores();
 
+    fecharPainelAchado();
 
     ocultarMensagem();
 
@@ -132,6 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .value
       .trim();
 
+
     const setor = document
       .getElementById("setor")
       .value
@@ -144,9 +147,12 @@ document.addEventListener("DOMContentLoaded", () => {
         "Informe a empresa ou fazenda antes de continuar."
       );
 
-      document.getElementById("empresa").focus();
+      document
+        .getElementById("empresa")
+        .focus();
 
       return;
+
     }
 
 
@@ -156,9 +162,12 @@ document.addEventListener("DOMContentLoaded", () => {
         "Informe o local ou setor da inspeção."
       );
 
-      document.getElementById("setor").focus();
+      document
+        .getElementById("setor")
+        .focus();
 
       return;
+
     }
 
 
@@ -169,6 +178,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       return;
+
     }
 
 
@@ -176,25 +186,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // -----------------------------------------------------
-    // ENVIO DA IMAGEM PARA ANÁLISE
+    // ENVIO DA IMAGEM
     // -----------------------------------------------------
 
     try {
 
-      exibirMensagem("Enviando imagem para análise...");
-
-      const imagemComprimida = await comprimirImagem(
-        fotoSelecionada
+      exibirMensagem(
+        "Enviando imagem para análise..."
       );
 
-      const imagemBase64 = await arquivoParaBase64(
-        imagemComprimida
-      );
+
+      const imagemComprimida =
+        await comprimirImagem(
+          fotoSelecionada
+        );
+
+
+      const imagemBase64 =
+        await arquivoParaBase64(
+          imagemComprimida
+        );
 
 
       const resposta = await fetch(
         "https://sst-vision.onrender.com/analisar-imagem",
         {
+
           method: "POST",
 
           headers: {
@@ -204,17 +221,20 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({
             imagemBase64
           })
+
         }
       );
 
 
-      const dados = await resposta.json();
+      const dados =
+        await resposta.json();
 
 
       if (!resposta.ok) {
 
         throw new Error(
-          dados.mensagem || "Falha ao enviar a imagem."
+          dados.mensagem ||
+          "Falha ao enviar a imagem."
         );
 
       }
@@ -228,34 +248,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
 
-          let analise = dados.analise;
+          let analise =
+            dados.analise;
 
 
-          // Caso o servidor ainda devolva JSON como string
           if (typeof analise === "string") {
-            analise = JSON.parse(analise);
+
+            analise =
+              JSON.parse(analise);
+
           }
 
 
-          console.log("Análise SST:", analise);
+          console.log(
+            "Análise SST:",
+            analise
+          );
 
 
-          // ------------------------------------------------
-          // IDENTIFICAÇÃO
-          // ------------------------------------------------
+          analiseAtual = analise;
+
 
           const descricaoIdentificacao =
             analise.identificacao?.descricao ||
             "Cenário não identificado";
 
 
-          // ------------------------------------------------
-          // ACHADOS
-          // ------------------------------------------------
-
-          const achados = Array.isArray(analise.achados)
-            ? analise.achados
-            : [];
+          const achados =
+            Array.isArray(
+              analise.achados
+            )
+              ? analise.achados
+              : [];
 
 
           console.log(
@@ -264,22 +288,25 @@ document.addEventListener("DOMContentLoaded", () => {
           );
 
 
-          // Remove marcadores antigos
           removerMarcadores();
+
+          fecharPainelAchado();
 
 
           // ------------------------------------------------
           // CRIAR MARCADORES
           // ------------------------------------------------
 
-          achados.forEach((achado, indice) => {
+          achados.forEach(
+            (achado, indice) => {
 
-            criarMarcador(
-              achado,
-              indice
-            );
+              criarMarcador(
+                achado,
+                indice
+              );
 
-          });
+            }
+          );
 
 
           // ------------------------------------------------
@@ -308,6 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
             erro
           );
 
+
           exibirMensagem(
             "A análise foi recebida, mas não pôde ser interpretada."
           );
@@ -332,6 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
         erro
       );
 
+
       exibirMensagem(
         "Não foi possível enviar a imagem para o servidor."
       );
@@ -345,13 +374,21 @@ document.addEventListener("DOMContentLoaded", () => {
   // CRIAR MARCADOR DE RISCO
   // -------------------------------------------------------
 
-  function criarMarcador(achado, indice) {
+  function criarMarcador(
+    achado,
+    indice
+  ) {
 
-    const marcador = document.createElement("button");
+    const marcador =
+      document.createElement(
+        "button"
+      );
+
 
     marcador.type = "button";
 
-    marcador.className = "marcador-risco";
+    marcador.className =
+      "marcador-risco";
 
 
     // -----------------------------------------------------
@@ -365,32 +402,42 @@ document.addEventListener("DOMContentLoaded", () => {
         : indice + 1;
 
 
-    marcador.textContent = numero;
+    marcador.textContent =
+      numero;
+
+
+    marcador.dataset.numero =
+      numero;
 
 
     // -----------------------------------------------------
     // POSIÇÃO
     // -----------------------------------------------------
 
-    const x = converterCoordenada(
-      achado.x ??
-      achado.posicao?.x ??
-      achado.coordenadas?.x ??
-      50
-    );
+    const x =
+      converterCoordenada(
+        achado.x ??
+        achado.posicao?.x ??
+        achado.coordenadas?.x ??
+        50
+      );
 
 
-    const y = converterCoordenada(
-      achado.y ??
-      achado.posicao?.y ??
-      achado.coordenadas?.y ??
-      50
-    );
+    const y =
+      converterCoordenada(
+        achado.y ??
+        achado.posicao?.y ??
+        achado.coordenadas?.y ??
+        50
+      );
 
 
-    marcador.style.left = `${x}%`;
+    marcador.style.left =
+      `${x}%`;
 
-    marcador.style.top = `${y}%`;
+
+    marcador.style.top =
+      `${y}%`;
 
 
     // -----------------------------------------------------
@@ -411,38 +458,14 @@ document.addEventListener("DOMContentLoaded", () => {
       (event) => {
 
         event.preventDefault();
+
         event.stopPropagation();
 
 
-        const titulo =
-          achado.titulo ||
-          `Achado ${numero}`;
-
-
-        const observado =
-          achado.observado ||
-          "Não informado";
-
-
-        const risco =
-          achado.possivel_risco ||
-          achado.risco ||
-          "Não informado";
-
-
-        const confianca =
-          achado.confianca ||
-          "Não informada";
-
-
-        exibirMensagem(
-`${numero} — ${titulo}
-
-Observado: ${observado}
-
-Possível risco: ${risco}
-
-Confiança: ${confianca}`
+        abrirDetalhesAchado(
+          achado,
+          marcador,
+          numero
         );
 
       }
@@ -457,32 +480,503 @@ Confiança: ${confianca}`
 
 
   // -------------------------------------------------------
+  // ABRIR DETALHES DO ACHADO
+  // -------------------------------------------------------
+
+  function abrirDetalhesAchado(
+    achado,
+    marcador,
+    numero
+  ) {
+
+    fecharPainelAchado();
+
+
+    const painel =
+      document.createElement(
+        "div"
+      );
+
+
+    painel.id =
+      "painelAchado";
+
+
+    painel.className =
+      "painel-achado";
+
+
+    const titulo =
+      achado.titulo ||
+      `Achado ${numero}`;
+
+
+    const observado =
+      achado.observado ||
+      achado.descricao ||
+      "Não informado";
+
+
+    const risco =
+      achado.possivel_risco ||
+      achado.risco ||
+      "Não informado";
+
+
+    painel.innerHTML = `
+
+      <div class="painel-achado-topo">
+
+        <strong>
+          ${numero} — ${escaparHTML(titulo)}
+        </strong>
+
+        <button
+          type="button"
+          class="btn-fechar-achado"
+          id="btnFecharAchado"
+        >
+          ×
+        </button>
+
+      </div>
+
+
+      <div class="painel-achado-conteudo">
+
+        <div class="campo-achado">
+
+          <span class="campo-achado-label">
+            Observado
+          </span>
+
+          <p>
+            ${escaparHTML(observado)}
+          </p>
+
+        </div>
+
+
+        <div class="campo-achado">
+
+          <span class="campo-achado-label">
+            Possível risco
+          </span>
+
+          <p>
+            ${escaparHTML(risco)}
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="acoes-achado">
+
+        <button
+          type="button"
+          class="btn-editar-achado"
+          id="btnEditarAchado"
+        >
+          Editar
+        </button>
+
+
+        <button
+          type="button"
+          class="btn-excluir-achado"
+          id="btnExcluirAchado"
+        >
+          Excluir
+        </button>
+
+      </div>
+
+    `;
+
+
+    previewContainer.insertAdjacentElement(
+      "afterend",
+      painel
+    );
+
+
+    // -----------------------------------------------------
+    // FECHAR
+    // -----------------------------------------------------
+
+    document
+      .getElementById(
+        "btnFecharAchado"
+      )
+      .addEventListener(
+        "click",
+        () => {
+
+          fecharPainelAchado();
+
+        }
+      );
+
+
+    // -----------------------------------------------------
+    // EDITAR
+    // -----------------------------------------------------
+
+    document
+      .getElementById(
+        "btnEditarAchado"
+      )
+      .addEventListener(
+        "click",
+        () => {
+
+          editarAchado(
+            achado,
+            marcador,
+            numero
+          );
+
+        }
+      );
+
+
+    // -----------------------------------------------------
+    // EXCLUIR
+    // -----------------------------------------------------
+
+    document
+      .getElementById(
+        "btnExcluirAchado"
+      )
+      .addEventListener(
+        "click",
+        () => {
+
+          excluirAchado(
+            achado,
+            marcador
+          );
+
+        }
+      );
+
+  }
+
+
+  // -------------------------------------------------------
+  // EDITAR ACHADO
+  // -------------------------------------------------------
+
+  function editarAchado(
+    achado,
+    marcador,
+    numero
+  ) {
+
+    const painel =
+      document.getElementById(
+        "painelAchado"
+      );
+
+
+    if (!painel) {
+
+      return;
+
+    }
+
+
+    const titulo =
+      achado.titulo ||
+      "";
+
+
+    const observado =
+      achado.observado ||
+      achado.descricao ||
+      "";
+
+
+    const risco =
+      achado.possivel_risco ||
+      achado.risco ||
+      "";
+
+
+    painel.innerHTML = `
+
+      <div class="painel-achado-topo">
+
+        <strong>
+          Editar achado ${numero}
+        </strong>
+
+      </div>
+
+
+      <div class="campo-edicao-achado">
+
+        <label>
+          Título
+        </label>
+
+        <input
+          type="text"
+          id="editarTituloAchado"
+          value="${escaparAtributo(titulo)}"
+        >
+
+      </div>
+
+
+      <div class="campo-edicao-achado">
+
+        <label>
+          Observado
+        </label>
+
+        <textarea
+          id="editarObservadoAchado"
+        >${escaparHTML(observado)}</textarea>
+
+      </div>
+
+
+      <div class="campo-edicao-achado">
+
+        <label>
+          Possível risco
+        </label>
+
+        <textarea
+          id="editarRiscoAchado"
+        >${escaparHTML(risco)}</textarea>
+
+      </div>
+
+
+      <div class="acoes-achado">
+
+        <button
+          type="button"
+          class="btn-salvar-achado"
+          id="btnSalvarAchado"
+        >
+          Salvar
+        </button>
+
+
+        <button
+          type="button"
+          class="btn-cancelar-achado"
+          id="btnCancelarAchado"
+        >
+          Cancelar
+        </button>
+
+      </div>
+
+    `;
+
+
+    // -----------------------------------------------------
+    // SALVAR
+    // -----------------------------------------------------
+
+    document
+      .getElementById(
+        "btnSalvarAchado"
+      )
+      .addEventListener(
+        "click",
+        () => {
+
+          const novoTitulo =
+            document
+              .getElementById(
+                "editarTituloAchado"
+              )
+              .value
+              .trim();
+
+
+          const novoObservado =
+            document
+              .getElementById(
+                "editarObservadoAchado"
+              )
+              .value
+              .trim();
+
+
+          const novoRisco =
+            document
+              .getElementById(
+                "editarRiscoAchado"
+              )
+              .value
+              .trim();
+
+
+          achado.titulo =
+            novoTitulo ||
+            `Achado ${numero}`;
+
+
+          achado.observado =
+            novoObservado;
+
+
+          achado.possivel_risco =
+            novoRisco;
+
+
+          achado.editado =
+            true;
+
+
+          marcador.title =
+            achado.titulo;
+
+
+          abrirDetalhesAchado(
+            achado,
+            marcador,
+            numero
+          );
+
+        }
+      );
+
+
+    // -----------------------------------------------------
+    // CANCELAR
+    // -----------------------------------------------------
+
+    document
+      .getElementById(
+        "btnCancelarAchado"
+      )
+      .addEventListener(
+        "click",
+        () => {
+
+          abrirDetalhesAchado(
+            achado,
+            marcador,
+            numero
+          );
+
+        }
+      );
+
+  }
+
+
+  // -------------------------------------------------------
+  // EXCLUIR ACHADO
+  // -------------------------------------------------------
+
+  function excluirAchado(
+    achado,
+    marcador
+  ) {
+
+    const confirmar =
+      window.confirm(
+        "Deseja excluir este achado da análise?"
+      );
+
+
+    if (!confirmar) {
+
+      return;
+
+    }
+
+
+    marcador.remove();
+
+
+    achado.excluido =
+      true;
+
+
+    fecharPainelAchado();
+
+
+    exibirMensagem(
+      "Achado excluído da análise."
+    );
+
+  }
+
+
+  // -------------------------------------------------------
+  // FECHAR PAINEL DO ACHADO
+  // -------------------------------------------------------
+
+  function fecharPainelAchado() {
+
+    const painel =
+      document.getElementById(
+        "painelAchado"
+      );
+
+
+    if (painel) {
+
+      painel.remove();
+
+    }
+
+  }
+
+
+  // -------------------------------------------------------
   // CONVERTER COORDENADA
   // -------------------------------------------------------
 
-  function converterCoordenada(valor) {
+  function converterCoordenada(
+    valor
+  ) {
 
-    let numero = Number(valor);
+    let numero =
+      Number(valor);
 
 
     if (!Number.isFinite(numero)) {
+
       return 50;
+
     }
 
 
-    // Se o backend enviar entre 0 e 1
-    if (numero >= 0 && numero <= 1) {
-      numero = numero * 100;
+    // Backend pode enviar coordenadas entre 0 e 1
+    if (
+      numero >= 0 &&
+      numero <= 1
+    ) {
+
+      numero =
+        numero * 100;
+
     }
 
 
-    // Impede marcador de sair da fotografia
     if (numero < 0) {
+
       numero = 0;
+
     }
+
 
     if (numero > 100) {
+
       numero = 100;
+
     }
 
 
@@ -498,12 +992,62 @@ Confiança: ${confianca}`
   function removerMarcadores() {
 
     previewContainer
-      .querySelectorAll(".marcador-risco")
-      .forEach((marcador) => {
+      .querySelectorAll(
+        ".marcador-risco"
+      )
+      .forEach(
+        (marcador) => {
 
-        marcador.remove();
+          marcador.remove();
 
-      });
+        }
+      );
+
+  }
+
+
+  // -------------------------------------------------------
+  // SEGURANÇA HTML
+  // -------------------------------------------------------
+
+  function escaparHTML(
+    texto
+  ) {
+
+    return String(
+      texto ?? ""
+    )
+      .replaceAll(
+        "&",
+        "&amp;"
+      )
+      .replaceAll(
+        "<",
+        "&lt;"
+      )
+      .replaceAll(
+        ">",
+        "&gt;"
+      )
+      .replaceAll(
+        '"',
+        "&quot;"
+      )
+      .replaceAll(
+        "'",
+        "&#039;"
+      );
+
+  }
+
+
+  function escaparAtributo(
+    texto
+  ) {
+
+    return escaparHTML(
+      texto
+    );
 
   }
 
@@ -512,33 +1056,46 @@ Confiança: ${confianca}`
   // TIPO DE INSPEÇÃO
   // -------------------------------------------------------
 
-  tiposInspecao.forEach((radio) => {
+  tiposInspecao.forEach(
+    (radio) => {
 
-    radio.addEventListener("change", () => {
+      radio.addEventListener(
+        "change",
+        () => {
 
-      const tipoSelecionado =
-        document.querySelector(
-          'input[name="tipoInspecao"]:checked'
-        )?.value;
+          const tipoSelecionado =
+            document.querySelector(
+              'input[name="tipoInspecao"]:checked'
+            )?.value;
 
 
-      if (tipoSelecionado === "ambiente") {
+          if (
+            tipoSelecionado ===
+            "ambiente"
+          ) {
 
-        grupoEquipamento.hidden = true;
+            grupoEquipamento.hidden =
+              true;
 
-        document.getElementById(
-          "equipamento"
-        ).value = "";
 
-      } else {
+            document
+              .getElementById(
+                "equipamento"
+              )
+              .value = "";
 
-        grupoEquipamento.hidden = false;
+          } else {
 
-      }
+            grupoEquipamento.hidden =
+              false;
 
-    });
+          }
 
-  });
+        }
+      );
+
+    }
+  );
 
 
   // -------------------------------------------------------
@@ -549,12 +1106,16 @@ Confiança: ${confianca}`
 
     fotoSelecionada = null;
 
+    analiseAtual = null;
+
     cameraInput.value = "";
 
 
     if (fotoURL) {
 
-      URL.revokeObjectURL(fotoURL);
+      URL.revokeObjectURL(
+        fotoURL
+      );
 
       fotoURL = null;
 
@@ -563,20 +1124,32 @@ Confiança: ${confianca}`
 
     removerMarcadores();
 
-
-    fotoPreview.removeAttribute("src");
-
-
-    cameraArea.hidden = false;
-
-    previewContainer.hidden = true;
+    fecharPainelAchado();
 
 
-    btnAbrirCamera.hidden = false;
+    fotoPreview.removeAttribute(
+      "src"
+    );
 
-    btnRefazerFoto.hidden = true;
 
-    btnUsarFoto.hidden = true;
+    cameraArea.hidden =
+      false;
+
+
+    previewContainer.hidden =
+      true;
+
+
+    btnAbrirCamera.hidden =
+      false;
+
+
+    btnRefazerFoto.hidden =
+      true;
+
+
+    btnUsarFoto.hidden =
+      true;
 
 
     ocultarMensagem();
@@ -597,29 +1170,45 @@ Confiança: ${confianca}`
     return new Promise(
       (resolve, reject) => {
 
-        const imagem = new Image();
+        const imagem =
+          new Image();
+
 
         const urlImagem =
-          URL.createObjectURL(arquivo);
+          URL.createObjectURL(
+            arquivo
+          );
 
 
         imagem.onload = () => {
 
-          let largura = imagem.width;
+          let largura =
+            imagem.width;
 
-          let altura = imagem.height;
+
+          let altura =
+            imagem.height;
 
 
-          if (largura > larguraMaxima) {
+          if (
+            largura >
+            larguraMaxima
+          ) {
 
             const proporcao =
-              larguraMaxima / largura;
+              larguraMaxima /
+              largura;
 
-            largura = larguraMaxima;
 
-            altura = Math.round(
-              altura * proporcao
-            );
+            largura =
+              larguraMaxima;
+
+
+            altura =
+              Math.round(
+                altura *
+                proporcao
+              );
 
           }
 
@@ -631,12 +1220,17 @@ Confiança: ${confianca}`
 
 
           const contexto =
-            canvas.getContext("2d");
+            canvas.getContext(
+              "2d"
+            );
 
 
-          canvas.width = largura;
+          canvas.width =
+            largura;
 
-          canvas.height = altura;
+
+          canvas.height =
+            altura;
 
 
           contexto.drawImage(
@@ -669,7 +1263,9 @@ Confiança: ${confianca}`
               }
 
 
-              resolve(blob);
+              resolve(
+                blob
+              );
 
             },
 
@@ -698,7 +1294,8 @@ Confiança: ${confianca}`
         };
 
 
-        imagem.src = urlImagem;
+        imagem.src =
+          urlImagem;
 
       }
     );
@@ -710,7 +1307,9 @@ Confiança: ${confianca}`
   // ARQUIVO PARA BASE64
   // -------------------------------------------------------
 
-  function arquivoParaBase64(arquivo) {
+  function arquivoParaBase64(
+    arquivo
+  ) {
 
     return new Promise(
       (resolve, reject) => {
@@ -726,7 +1325,8 @@ Confiança: ${confianca}`
 
 
           if (
-            typeof resultado !== "string"
+            typeof resultado !==
+            "string"
           ) {
 
             reject(
@@ -741,10 +1341,13 @@ Confiança: ${confianca}`
 
 
           const base64 =
-            resultado.split(",")[1];
+            resultado
+              .split(",")[1];
 
 
-          resolve(base64);
+          resolve(
+            base64
+          );
 
         };
 
@@ -774,11 +1377,16 @@ Confiança: ${confianca}`
   // EXIBIR MENSAGEM
   // -------------------------------------------------------
 
-  function exibirMensagem(texto) {
+  function exibirMensagem(
+    texto
+  ) {
 
-    mensagem.textContent = texto;
+    mensagem.textContent =
+      texto;
 
-    mensagem.hidden = false;
+
+    mensagem.hidden =
+      false;
 
 
     mensagem.scrollIntoView({
@@ -795,9 +1403,12 @@ Confiança: ${confianca}`
 
   function ocultarMensagem() {
 
-    mensagem.textContent = "";
+    mensagem.textContent =
+      "";
 
-    mensagem.hidden = true;
+
+    mensagem.hidden =
+      true;
 
   }
 
@@ -806,24 +1417,30 @@ Confiança: ${confianca}`
   // SERVICE WORKER
   // -------------------------------------------------------
 
-  if ("serviceWorker" in navigator) {
+  if (
+    "serviceWorker" in
+    navigator
+  ) {
 
     window.addEventListener(
       "load",
       () => {
 
-        navigator.serviceWorker
+        navigator
+          .serviceWorker
           .register(
             "./service-worker.js"
           )
-          .catch((erro) => {
+          .catch(
+            (erro) => {
 
-            console.error(
-              "Erro ao registrar Service Worker:",
-              erro
-            );
+              console.error(
+                "Erro ao registrar Service Worker:",
+                erro
+              );
 
-          });
+            }
+          );
 
       }
     );
