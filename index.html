@@ -134,6 +134,37 @@
 
       </div>
 
+      <div class="form-group">
+        <label for="observacao">
+          Observação
+          <span class="opcional">(opcional)</span>
+        </label>
+
+        <div class="observacao-com-voz">
+          <textarea
+            id="observacao"
+            rows="4"
+            placeholder="Digite uma observação ou use o microfone"
+          ></textarea>
+
+          <button
+            type="button"
+            id="btnMicrofone"
+            class="btn-microfone"
+            aria-label="Gravar observação por voz"
+            title="Gravar observação por voz"
+          >
+            🎤
+          </button>
+        </div>
+
+        <small
+          id="statusMicrofone"
+          class="ajuda"
+          hidden
+        ></small>
+      </div>
+
     </section>
 
 
