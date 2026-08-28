@@ -1,4 +1,4 @@
-const CACHE_NAME = "sst-vision-v11";
+const CACHE_NAME = "sst-vision-v12";
 
 const ARQUIVOS_CACHE = [
   "./",
@@ -17,24 +17,14 @@ self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ARQUIVOS_CACHE)));
   self.skipWaiting();
 });
-
 self.addEventListener("activate", (event) => {
-  event.waitUntil(caches.keys().then((nomesCaches) => Promise.all(nomesCaches.map((nomeCache) => nomeCache !== CACHE_NAME ? caches.delete(nomeCache) : null))));
+  event.waitUntil(caches.keys().then((nomes) => Promise.all(nomes.map((nome) => nome !== CACHE_NAME ? caches.delete(nome) : null))));
   self.clients.claim();
 });
-
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  event.respondWith(
-    fetch(event.request).then((respostaRede) => {
-      if (respostaRede && respostaRede.status === 200 && respostaRede.type !== "opaque") {
-        const respostaClone = respostaRede.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, respostaClone));
-      }
-      return respostaRede;
-    }).catch(() => caches.match(event.request).then((respostaCache) => {
-      if (respostaCache) return respostaCache;
-      if (event.request.mode === "navigate") return caches.match("./index.html");
-    }))
-  );
+  event.respondWith(fetch(event.request).then((r) => {
+    if (r && r.status === 200 && r.type !== "opaque") caches.open(CACHE_NAME).then((c) => c.put(event.request, r.clone()));
+    return r;
+  }).catch(() => caches.match(event.request).then((r) => r || (event.request.mode === "navigate" ? caches.match("./index.html") : undefined))));
 });
