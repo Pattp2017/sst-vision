@@ -5,7 +5,6 @@ import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 
 dotenv.config();
-
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const app = express();
 app.use(cors());
@@ -19,148 +18,21 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 
-app.get("/", (req, res) => res.json({ status: "ok", projeto: "SST Vision", mensagem: "Backend funcionando." }));
+app.get("/", (req,res)=>res.json({status:"ok",projeto:"SST Vision",mensagem:"Backend funcionando."}));
+app.get("/teste-supabase", async (req,res)=>{try{const s=supabaseAdmin();const r={variaveis:{urlConfigurada:Boolean(process.env.SUPABASE_URL),chaveConfigurada:Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)},tabela:null,storage:null};const{data:d,error:e}=await s.from("vision_analises").select("id").limit(1);r.tabela=e?{ok:false,erro:e.message,codigo:e.code||null}:{ok:true,registrosLidos:Array.isArray(d)?d.length:0};const{data:b,error:eb}=await s.storage.getBucket("vision-fotos");r.storage=eb?{ok:false,erro:eb.message}:{ok:true,bucket:b?.name||"vision-fotos"};const ok=r.tabela.ok&&r.storage.ok;return res.status(ok?200:500).json({status:ok?"ok":"erro",diagnostico:r});}catch(e){return res.status(500).json({status:"erro",mensagem:e?.message||"Falha no diagnóstico Supabase."});}});
 
-app.get("/teste-supabase", async (req, res) => {
-  try {
-    const supabase = supabaseAdmin();
-    const resultado = {
-      variaveis: {
-        urlConfigurada: Boolean(process.env.SUPABASE_URL),
-        chaveConfigurada: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
-      },
-      tabela: null,
-      storage: null
-    };
+app.get("/teste-ia", async(req,res)=>{try{const r=await ai.models.generateContent({model:"gemini-3.5-flash-lite",contents:"Responda apenas: SST Vision conectado com sucesso."});res.json({status:"ok",resposta:r.text});}catch(e){console.error(e);res.status(500).json({status:"erro",mensagem:"Falha ao conectar com a IA."});}});
 
-    const { data: dadosTabela, error: erroTabela } = await supabase
-      .from("vision_analises")
-      .select("id")
-      .limit(1);
+app.post("/transcrever-audio",async(req,res)=>{try{const{audioBase64,mimeType}=req.body;if(!audioBase64)return res.status(400).json({status:"erro",mensagem:"Nenhum áudio recebido."});const permitidos=["audio/webm","audio/mp4","audio/mpeg","audio/wav","audio/ogg"];const recebido=String(mimeType||"audio/webm").split(";")[0].trim().toLowerCase();const tipo=permitidos.includes(recebido)?recebido:"audio/webm";const r=await ai.models.generateContent({model:"gemini-3.5-flash-lite",contents:[{role:"user",parts:[{text:"Transcreva fielmente este áudio em português do Brasil. O áudio é uma observação de campo de uma inspeção de Segurança e Saúde no Trabalho. Retorne somente o texto transcrito, sem explicações e sem acrescentar informações. Corrija apenas pontuação e capitalização."},{inlineData:{mimeType:tipo,data:audioBase64}}]}]});return res.json({status:"ok",texto:String(r.text||"").trim()});}catch(e){console.error(e);return res.status(500).json({status:"erro",mensagem:"Falha ao transcrever o áudio."});}});
 
-    resultado.tabela = erroTabela
-      ? { ok: false, erro: erroTabela.message, codigo: erroTabela.code || null }
-      : { ok: true, registrosLidos: Array.isArray(dadosTabela) ? dadosTabela.length : 0 };
+app.post("/analisar-imagem",async(req,res)=>{try{const{imagemBase64}=req.body;if(!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Nenhuma imagem recebida."});const r=await ai.models.generateContent({model:"gemini-3.5-flash-lite",contents:[{role:"user",parts:[{text:`Você está auxiliando em uma inspeção visual de Segurança e Saúde no Trabalho (SST). Analise exclusivamente o que estiver visível na fotografia. Retorne SOMENTE um JSON válido, sem Markdown e sem texto antes ou depois. Use exatamente esta estrutura: {"identificacao":{"tipo":"maquina | equipamento | ambiente | nao_identificado","descricao":"descrição objetiva do que foi identificado","confianca":"baixa | media | alta"},"achados":[{"id":1,"titulo":"nome curto do achado","observado":"descrição somente do que é visível","possivel_risco":"risco relacionado ao que foi observado","confianca":"baixa | media | alta","posicao":{"x":50,"y":50}}],"limitacoes":["informação que não pode ser confirmada somente pela fotografia"]}. REGRAS: x e y de 0 a 100 e indicam aproximadamente o centro visual do achado. Não invente componentes. Não trate hipótese como fato. Não presuma ausência de proteção quando a região não estiver visível. Não declare conformidade ou não conformidade legal. Não cite NR. Se não houver achado visual relevante, retorne achados vazio. Preserve a distinção entre condição observada e possível risco.`},{inlineData:{mimeType:"image/jpeg",data:imagemBase64}}]}]});return res.json({status:"ok",analise:r.text});}catch(e){console.error(e);return res.status(500).json({status:"erro",mensagem:"Falha ao processar a imagem."});}});
 
-    const { data: bucket, error: erroBucket } = await supabase.storage.getBucket("vision-fotos");
-    resultado.storage = erroBucket
-      ? { ok: false, erro: erroBucket.message }
-      : { ok: true, bucket: bucket?.name || "vision-fotos" };
+function registrosAchados(analiseId, achados) {
+  return (Array.isArray(achados)?achados:[]).map((a,i)=>({analise_id:analiseId,numero:Number(a.numero??a.id??i+1),titulo:a.titulo||null,observado:a.observado||a.descricao||null,possivel_risco:a.possivel_risco||a.risco||null,confianca:a.confianca||null,posicao_x:Number(a.x??a.posicao?.x??50),posicao_y:Number(a.y??a.posicao?.y??50),origem:a.origem==="manual"||a.manual?"manual":"ia",editado:Boolean(a.editado)}));
+}
 
-    const tudoOk = resultado.tabela.ok && resultado.storage.ok;
-    return res.status(tudoOk ? 200 : 500).json({
-      status: tudoOk ? "ok" : "erro",
-      diagnostico: resultado
-    });
-  } catch (erro) {
-    console.error("Erro no diagnóstico Supabase:", erro);
-    return res.status(500).json({
-      status: "erro",
-      mensagem: erro?.message || "Falha no diagnóstico Supabase."
-    });
-  }
-});
+app.post("/salvar-analise",async(req,res)=>{let analiseId=null,storagePath=null;try{const{empresa,setor,tipoAnalise,equipamento,observacao,identificacao,achados,imagemBase64}=req.body;if(!empresa||!setor||!tipoAnalise||!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Dados obrigatórios da análise não foram recebidos."});const s=supabaseAdmin();const{data:a,error:ea}=await s.from("vision_analises").insert({empresa,setor,tipo_analise:tipoAnalise,equipamento:equipamento||null,observacao:observacao||null,identificacao_tipo:identificacao?.tipo||null,identificacao_descricao:identificacao?.descricao||null,identificacao_confianca:identificacao?.confianca||null,status:"validada",validada_em:new Date().toISOString()}).select("id").single();if(ea)throw new Error(`vision_analises: ${ea.message}`);analiseId=a.id;const buffer=Buffer.from(imagemBase64,"base64");storagePath=`${analiseId}/foto-1.jpg`;const{error:eu}=await s.storage.from("vision-fotos").upload(storagePath,buffer,{contentType:"image/jpeg",upsert:false});if(eu)throw new Error(`Storage vision-fotos: ${eu.message}`);const{error:ef}=await s.from("vision_fotos").insert({analise_id:analiseId,storage_path:storagePath,ordem:1});if(ef)throw new Error(`vision_fotos: ${ef.message}`);const regs=registrosAchados(analiseId,achados);if(regs.length){const{error:eac}=await s.from("vision_achados").insert(regs);if(eac)throw new Error(`vision_achados: ${eac.message}`);}return res.json({status:"ok",mensagem:"Análise salva com sucesso.",analiseId,ordemFoto:1});}catch(e){console.error(e);try{const s=supabaseAdmin();if(storagePath)await s.storage.from("vision-fotos").remove([storagePath]);if(analiseId)await s.from("vision_analises").delete().eq("id",analiseId);}catch(er){console.error(er);}return res.status(500).json({status:"erro",mensagem:e?.message||"Não foi possível salvar a análise no banco."});}});
 
-app.get("/teste-ia", async (req, res) => {
-  try {
-    const response = await ai.models.generateContent({ model: "gemini-3.5-flash-lite", contents: "Responda apenas: SST Vision conectado com sucesso." });
-    res.json({ status: "ok", resposta: response.text });
-  } catch (erro) {
-    console.error("Erro Gemini:", erro);
-    res.status(500).json({ status: "erro", mensagem: "Falha ao conectar com a IA." });
-  }
-});
+app.post("/adicionar-foto-analise",async(req,res)=>{let storagePath=null;try{const{analiseId,achados,imagemBase64}=req.body;if(!analiseId||!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Análise e foto são obrigatórias."});const s=supabaseAdmin();const{data:existente,error:ee}=await s.from("vision_analises").select("id").eq("id",analiseId).single();if(ee||!existente)throw new Error("Análise original não encontrada.");const{data:fotos,error:ec}=await s.from("vision_fotos").select("ordem").eq("analise_id",analiseId).order("ordem",{ascending:false}).limit(1);if(ec)throw new Error(`vision_fotos: ${ec.message}`);const ordem=(fotos?.[0]?.ordem||0)+1;storagePath=`${analiseId}/foto-${ordem}.jpg`;const buffer=Buffer.from(imagemBase64,"base64");const{error:eu}=await s.storage.from("vision-fotos").upload(storagePath,buffer,{contentType:"image/jpeg",upsert:false});if(eu)throw new Error(`Storage vision-fotos: ${eu.message}`);const{error:ef}=await s.from("vision_fotos").insert({analise_id:analiseId,storage_path:storagePath,ordem});if(ef)throw new Error(`vision_fotos: ${ef.message}`);const regs=registrosAchados(analiseId,achados);if(regs.length){const{error:ea}=await s.from("vision_achados").insert(regs);if(ea)throw new Error(`vision_achados: ${ea.message}`);}return res.json({status:"ok",mensagem:"Foto adicionada à análise.",analiseId,ordemFoto:ordem});}catch(e){console.error(e);try{if(storagePath)await supabaseAdmin().storage.from("vision-fotos").remove([storagePath]);}catch(er){console.error(er);}return res.status(500).json({status:"erro",mensagem:e?.message||"Não foi possível adicionar a foto."});}});
 
-app.post("/transcrever-audio", async (req, res) => {
-  try {
-    const { audioBase64, mimeType } = req.body;
-    if (!audioBase64) return res.status(400).json({ status: "erro", mensagem: "Nenhum áudio recebido." });
-    const tiposPermitidos = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/wav", "audio/ogg"];
-    const tipoRecebido = String(mimeType || "audio/webm").split(";")[0].trim().toLowerCase();
-    const tipoAudio = tiposPermitidos.includes(tipoRecebido) ? tipoRecebido : "audio/webm";
-    const respostaIA = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: [{ role: "user", parts: [{ text: "Transcreva fielmente este áudio em português do Brasil. O áudio é uma observação de campo de uma inspeção de Segurança e Saúde no Trabalho. Retorne somente o texto transcrito, sem explicações e sem acrescentar informações. Corrija apenas pontuação e capitalização." }, { inlineData: { mimeType: tipoAudio, data: audioBase64 } }] }]
-    });
-    return res.json({ status: "ok", texto: String(respostaIA.text || "").trim() });
-  } catch (erro) {
-    console.error("Erro ao transcrever áudio:", erro);
-    return res.status(500).json({ status: "erro", mensagem: "Falha ao transcrever o áudio." });
-  }
-});
-
-app.post("/analisar-imagem", async (req, res) => {
-  try {
-    const { imagemBase64 } = req.body;
-    if (!imagemBase64) return res.status(400).json({ status: "erro", mensagem: "Nenhuma imagem recebida." });
-    const respostaIA = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: [{ role: "user", parts: [{ text: `Você está auxiliando em uma inspeção visual de Segurança e Saúde no Trabalho (SST).
-Analise exclusivamente o que estiver visível na fotografia.
-Retorne SOMENTE um JSON válido, sem Markdown e sem texto antes ou depois.
-Use exatamente esta estrutura:
-{"identificacao":{"tipo":"maquina | equipamento | ambiente | nao_identificado","descricao":"descrição objetiva do que foi identificado","confianca":"baixa | media | alta"},"achados":[{"id":1,"titulo":"nome curto do achado","observado":"descrição somente do que é visível","possivel_risco":"risco relacionado ao que foi observado","confianca":"baixa | media | alta","posicao":{"x":50,"y":50}}],"limitacoes":["informação que não pode ser confirmada somente pela fotografia"]}
-REGRAS: x e y de 0 a 100 e indicam aproximadamente o centro visual do achado. Não invente componentes. Não trate hipótese como fato. Não presuma ausência de proteção quando a região não estiver visível. Não declare conformidade ou não conformidade legal. Não cite NR. Se não houver achado visual relevante, retorne achados vazio. Preserve a distinção entre condição observada e possível risco.` }, { inlineData: { mimeType: "image/jpeg", data: imagemBase64 } }] }]
-    });
-    return res.json({ status: "ok", analise: respostaIA.text });
-  } catch (erro) {
-    console.error("Erro ao receber imagem:", erro);
-    return res.status(500).json({ status: "erro", mensagem: "Falha ao processar a imagem." });
-  }
-});
-
-app.post("/salvar-analise", async (req, res) => {
-  let analiseId = null;
-  let storagePath = null;
-  try {
-    const { empresa, setor, tipoAnalise, equipamento, observacao, identificacao, achados, imagemBase64 } = req.body;
-    if (!empresa || !setor || !tipoAnalise || !imagemBase64) return res.status(400).json({ status: "erro", mensagem: "Dados obrigatórios da análise não foram recebidos." });
-
-    const supabase = supabaseAdmin();
-    const { data: analise, error: erroAnalise } = await supabase.from("vision_analises").insert({
-      empresa, setor, tipo_analise: tipoAnalise, equipamento: equipamento || null, observacao: observacao || null,
-      identificacao_tipo: identificacao?.tipo || null, identificacao_descricao: identificacao?.descricao || null,
-      identificacao_confianca: identificacao?.confianca || null, status: "validada", validada_em: new Date().toISOString()
-    }).select("id").single();
-    if (erroAnalise) throw new Error(`vision_analises: ${erroAnalise.message}`);
-    analiseId = analise.id;
-
-    const buffer = Buffer.from(imagemBase64, "base64");
-    storagePath = `${analiseId}/foto-1.jpg`;
-    const { error: erroUpload } = await supabase.storage.from("vision-fotos").upload(storagePath, buffer, { contentType: "image/jpeg", upsert: false });
-    if (erroUpload) throw new Error(`Storage vision-fotos: ${erroUpload.message}`);
-
-    const { error: erroFoto } = await supabase.from("vision_fotos").insert({ analise_id: analiseId, storage_path: storagePath, ordem: 1 });
-    if (erroFoto) throw new Error(`vision_fotos: ${erroFoto.message}`);
-
-    const lista = Array.isArray(achados) ? achados : [];
-    if (lista.length) {
-      const registros = lista.map((a, indice) => ({
-        analise_id: analiseId,
-        numero: Number(a.numero ?? a.id ?? indice + 1),
-        titulo: a.titulo || null,
-        observado: a.observado || a.descricao || null,
-        possivel_risco: a.possivel_risco || a.risco || null,
-        confianca: a.confianca || null,
-        posicao_x: Number(a.x ?? a.posicao?.x ?? 50),
-        posicao_y: Number(a.y ?? a.posicao?.y ?? 50),
-        origem: a.origem === "manual" || a.manual ? "manual" : "ia",
-        editado: Boolean(a.editado)
-      }));
-      const { error: erroAchados } = await supabase.from("vision_achados").insert(registros);
-      if (erroAchados) throw new Error(`vision_achados: ${erroAchados.message}`);
-    }
-
-    return res.json({ status: "ok", mensagem: "Análise salva com sucesso.", analiseId });
-  } catch (erro) {
-    console.error("Erro ao salvar análise:", erro);
-    try {
-      const supabase = supabaseAdmin();
-      if (storagePath) await supabase.storage.from("vision-fotos").remove([storagePath]);
-      if (analiseId) await supabase.from("vision_analises").delete().eq("id", analiseId);
-    } catch (rollbackErro) { console.error("Erro no rollback:", rollbackErro); }
-    return res.status(500).json({ status: "erro", mensagem: erro?.message || "Não foi possível salvar a análise no banco." });
-  }
-});
-
-app.listen(PORT, () => console.log(`SST Vision rodando na porta ${PORT}`));
+app.listen(PORT,()=>console.log(`SST Vision rodando na porta ${PORT}`));
