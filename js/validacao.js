@@ -4,8 +4,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const preview = document.getElementById("previewContainer");
   const foto = document.getElementById("fotoPreview");
   const btnUsarFoto = document.getElementById("btnUsarFoto");
+  const btnRefazerFoto = document.getElementById("btnRefazerFoto");
   const mensagem = document.getElementById("mensagem");
   if (!preview || !foto || !btnUsarFoto) return;
+
+  const contextoSalvo = sessionStorage.getItem("sstVisionNovaAnalise");
+  if (contextoSalvo) {
+    try {
+      const contexto = JSON.parse(contextoSalvo);
+      const empresa = document.getElementById("empresa");
+      const setor = document.getElementById("setor");
+      const tipo = document.querySelector(`input[name="tipoInspecao"][value="${contexto.tipoAnalise}"]`);
+      if (empresa) empresa.value = contexto.empresa || "";
+      if (setor) setor.value = contexto.setor || "";
+      if (tipo) {
+        tipo.checked = true;
+        tipo.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    } catch (erro) {
+      console.error("Erro ao restaurar contexto da nova análise:", erro);
+    }
+    sessionStorage.removeItem("sstVisionNovaAnalise");
+  }
 
   let btnValidar = document.getElementById("btnValidarAnalise");
   if (!btnValidar) {
@@ -56,6 +76,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function prepararNovaAnalise() {
+    const empresa = document.getElementById("empresa")?.value.trim() || "";
+    const setor = document.getElementById("setor")?.value.trim() || "";
+    const tipoAnalise = document.querySelector('input[name="tipoInspecao"]:checked')?.value || "maquina";
+
+    sessionStorage.setItem("sstVisionNovaAnalise", JSON.stringify({ empresa, setor, tipoAnalise }));
+    window.location.reload();
+  }
+
   btnValidar.addEventListener("click", async () => {
     if (btnValidar.disabled) return;
     const empresa = document.getElementById("empresa")?.value.trim();
@@ -84,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
       });
       const dados = await resposta.json();
-      if (!resposta.ok) throw new Error(dados.mensagem || "Falha ao salvar análise.");
+      if (!resposta.ok) throw new Error(dados.detalhe || dados.mensagem || "Falha ao salvar análise.");
 
       window.sstAnaliseValidada = {
         validada: true, salva: true, analiseId: dados.analiseId,
@@ -96,6 +125,18 @@ document.addEventListener("DOMContentLoaded", () => {
       btnValidar.textContent = "✓ Análise validada e salva";
       btnValidar.classList.add("validada");
       marcadoresAtivos.forEach((m) => m.classList.add("marcador-validado"));
+
+      if (btnRefazerFoto) btnRefazerFoto.hidden = true;
+      btnUsarFoto.hidden = false;
+      btnUsarFoto.textContent = "Nova análise";
+      btnUsarFoto.classList.remove("btn-success");
+      btnUsarFoto.classList.add("btn-primary");
+      btnUsarFoto.onclick = (event) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        prepararNovaAnalise();
+      };
+
       if (mensagem) {
         mensagem.hidden = false;
         mensagem.textContent = `Análise validada e salva. ${marcadoresAtivos.length} achado(s) confirmado(s).`;
@@ -106,7 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btnValidar.textContent = "✓ Validar análise";
       if (mensagem) {
         mensagem.hidden = false;
-        mensagem.textContent = "A análise não foi salva. Verifique a conexão e tente novamente.";
+        mensagem.textContent = `A análise não foi salva. ${erro.message || "Verifique a conexão e tente novamente."}`;
       }
     }
   });
