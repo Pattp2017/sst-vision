@@ -14,12 +14,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnAbrirCamera = document.getElementById("btnAbrirCamera");
   const btnRefazerFoto = document.getElementById("btnRefazerFoto");
   const btnUsarFoto = document.getElementById("btnUsarFoto");
+  const btnMicrofone = document.getElementById("btnMicrofone");
 
   const cameraArea = document.getElementById("cameraArea");
   const previewContainer = document.getElementById("previewContainer");
   const fotoPreview = document.getElementById("fotoPreview");
 
   const grupoEquipamento = document.getElementById("grupoEquipamento");
+  const observacao = document.getElementById("observacao");
+  const statusMicrofone = document.getElementById("statusMicrofone");
 
   const mensagem = document.getElementById("mensagem");
 
@@ -36,6 +39,119 @@ document.addEventListener("DOMContentLoaded", () => {
   let fotoURL = null;
 
   let analiseAtual = null;
+
+
+  // -------------------------------------------------------
+  // RECONHECIMENTO DE VOZ
+  // -------------------------------------------------------
+
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  let reconhecimento = null;
+  let reconhecendo = false;
+
+  if (SpeechRecognition && btnMicrofone) {
+
+    reconhecimento = new SpeechRecognition();
+
+    reconhecimento.lang = "pt-BR";
+    reconhecimento.continuous = false;
+    reconhecimento.interimResults = true;
+
+    reconhecimento.addEventListener("start", () => {
+      reconhecendo = true;
+      btnMicrofone.classList.add("gravando");
+      btnMicrofone.setAttribute("aria-pressed", "true");
+      atualizarStatusMicrofone("Ouvindo... fale sua observação.");
+    });
+
+    reconhecimento.addEventListener("result", (event) => {
+      let textoFinal = "";
+      let textoParcial = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const trecho = event.results[i][0].transcript;
+
+        if (event.results[i].isFinal) {
+          textoFinal += trecho;
+        } else {
+          textoParcial += trecho;
+        }
+      }
+
+      if (textoFinal) {
+        const textoExistente = observacao.value.trim();
+        const separador = textoExistente ? " " : "";
+
+        observacao.value =
+          `${textoExistente}${separador}${textoFinal.trim()}`;
+      }
+
+      if (textoParcial) {
+        atualizarStatusMicrofone(`Ouvindo: ${textoParcial.trim()}`);
+      }
+    });
+
+    reconhecimento.addEventListener("end", () => {
+      reconhecendo = false;
+      btnMicrofone.classList.remove("gravando");
+      btnMicrofone.setAttribute("aria-pressed", "false");
+      atualizarStatusMicrofone("Ditado encerrado.");
+    });
+
+    reconhecimento.addEventListener("error", (event) => {
+      reconhecendo = false;
+      btnMicrofone.classList.remove("gravando");
+      btnMicrofone.setAttribute("aria-pressed", "false");
+
+      let textoErro = "Não foi possível usar o microfone.";
+
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        textoErro = "Permissão do microfone negada no navegador.";
+      } else if (event.error === "no-speech") {
+        textoErro = "Nenhuma fala foi identificada.";
+      } else if (event.error === "audio-capture") {
+        textoErro = "Nenhum microfone disponível.";
+      }
+
+      atualizarStatusMicrofone(textoErro);
+    });
+
+    btnMicrofone.addEventListener("click", () => {
+      if (reconhecendo) {
+        reconhecimento.stop();
+        return;
+      }
+
+      try {
+        reconhecimento.start();
+      } catch (erro) {
+        console.error("Erro ao iniciar reconhecimento de voz:", erro);
+        atualizarStatusMicrofone("Não foi possível iniciar o microfone.");
+      }
+    });
+
+  } else if (btnMicrofone) {
+
+    btnMicrofone.disabled = true;
+    btnMicrofone.title = "Reconhecimento de voz não suportado neste navegador";
+    atualizarStatusMicrofone(
+      "Seu navegador não oferece ditado por voz nesta tela. Você ainda pode digitar a observação."
+    );
+
+  }
+
+
+  function atualizarStatusMicrofone(texto) {
+    if (!statusMicrofone) {
+      return;
+    }
+
+    statusMicrofone.textContent = texto;
+    statusMicrofone.hidden = false;
+  }
 
 
   // -------------------------------------------------------
