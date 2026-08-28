@@ -21,6 +21,46 @@ function supabaseAdmin() {
 
 app.get("/", (req, res) => res.json({ status: "ok", projeto: "SST Vision", mensagem: "Backend funcionando." }));
 
+app.get("/teste-supabase", async (req, res) => {
+  try {
+    const supabase = supabaseAdmin();
+    const resultado = {
+      variaveis: {
+        urlConfigurada: Boolean(process.env.SUPABASE_URL),
+        chaveConfigurada: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY)
+      },
+      tabela: null,
+      storage: null
+    };
+
+    const { data: dadosTabela, error: erroTabela } = await supabase
+      .from("vision_analises")
+      .select("id")
+      .limit(1);
+
+    resultado.tabela = erroTabela
+      ? { ok: false, erro: erroTabela.message, codigo: erroTabela.code || null }
+      : { ok: true, registrosLidos: Array.isArray(dadosTabela) ? dadosTabela.length : 0 };
+
+    const { data: bucket, error: erroBucket } = await supabase.storage.getBucket("vision-fotos");
+    resultado.storage = erroBucket
+      ? { ok: false, erro: erroBucket.message }
+      : { ok: true, bucket: bucket?.name || "vision-fotos" };
+
+    const tudoOk = resultado.tabela.ok && resultado.storage.ok;
+    return res.status(tudoOk ? 200 : 500).json({
+      status: tudoOk ? "ok" : "erro",
+      diagnostico: resultado
+    });
+  } catch (erro) {
+    console.error("Erro no diagnóstico Supabase:", erro);
+    return res.status(500).json({
+      status: "erro",
+      mensagem: erro?.message || "Falha no diagnóstico Supabase."
+    });
+  }
+});
+
 app.get("/teste-ia", async (req, res) => {
   try {
     const response = await ai.models.generateContent({ model: "gemini-3.5-flash-lite", contents: "Responda apenas: SST Vision conectado com sucesso." });
@@ -82,16 +122,16 @@ app.post("/salvar-analise", async (req, res) => {
       identificacao_tipo: identificacao?.tipo || null, identificacao_descricao: identificacao?.descricao || null,
       identificacao_confianca: identificacao?.confianca || null, status: "validada", validada_em: new Date().toISOString()
     }).select("id").single();
-    if (erroAnalise) throw erroAnalise;
+    if (erroAnalise) throw new Error(`vision_analises: ${erroAnalise.message}`);
     analiseId = analise.id;
 
     const buffer = Buffer.from(imagemBase64, "base64");
     storagePath = `${analiseId}/foto-1.jpg`;
     const { error: erroUpload } = await supabase.storage.from("vision-fotos").upload(storagePath, buffer, { contentType: "image/jpeg", upsert: false });
-    if (erroUpload) throw erroUpload;
+    if (erroUpload) throw new Error(`Storage vision-fotos: ${erroUpload.message}`);
 
     const { error: erroFoto } = await supabase.from("vision_fotos").insert({ analise_id: analiseId, storage_path: storagePath, ordem: 1 });
-    if (erroFoto) throw erroFoto;
+    if (erroFoto) throw new Error(`vision_fotos: ${erroFoto.message}`);
 
     const lista = Array.isArray(achados) ? achados : [];
     if (lista.length) {
@@ -108,7 +148,7 @@ app.post("/salvar-analise", async (req, res) => {
         editado: Boolean(a.editado)
       }));
       const { error: erroAchados } = await supabase.from("vision_achados").insert(registros);
-      if (erroAchados) throw erroAchados;
+      if (erroAchados) throw new Error(`vision_achados: ${erroAchados.message}`);
     }
 
     return res.json({ status: "ok", mensagem: "Análise salva com sucesso.", analiseId });
@@ -119,7 +159,7 @@ app.post("/salvar-analise", async (req, res) => {
       if (storagePath) await supabase.storage.from("vision-fotos").remove([storagePath]);
       if (analiseId) await supabase.from("vision_analises").delete().eq("id", analiseId);
     } catch (rollbackErro) { console.error("Erro no rollback:", rollbackErro); }
-    return res.status(500).json({ status: "erro", mensagem: "Não foi possível salvar a análise no banco." });
+    return res.status(500).json({ status: "erro", mensagem: erro?.message || "Não foi possível salvar a análise no banco." });
   }
 });
 
