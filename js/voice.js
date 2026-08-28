@@ -4,11 +4,22 @@
 // =========================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  const btnMicrofone = document.getElementById("btnMicrofone");
+  const botaoOriginal = document.getElementById("btnMicrofone");
   const observacao = document.getElementById("observacao");
   const statusMicrofone = document.getElementById("statusMicrofone");
 
-  if (!btnMicrofone || !observacao || !statusMicrofone) return;
+  if (!botaoOriginal || !observacao || !statusMicrofone) return;
+
+  // O app.js antigo podia desativar o botão ao tentar usar SpeechRecognition.
+  // Substituímos o botão por um clone limpo para remover listeners antigos
+  // e garantir que esta implementação assuma o controle.
+  const btnMicrofone = botaoOriginal.cloneNode(true);
+  botaoOriginal.replaceWith(btnMicrofone);
+  btnMicrofone.disabled = false;
+  btnMicrofone.classList.remove("gravando");
+  btnMicrofone.textContent = "🎤";
+  btnMicrofone.setAttribute("aria-label", "Gravar observação por voz");
+  btnMicrofone.title = "Gravar observação por voz";
 
   let mediaRecorder = null;
   let streamAtual = null;
@@ -29,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function restaurarBotao() {
     gravando = false;
+    btnMicrofone.disabled = false;
     btnMicrofone.classList.remove("gravando");
     btnMicrofone.textContent = "🎤";
     btnMicrofone.setAttribute("aria-label", "Gravar observação por voz");
@@ -91,7 +103,6 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Erro ao transcrever áudio:", erro);
       mostrarStatus("Não foi possível transcrever o áudio. Tente novamente.");
     } finally {
-      btnMicrofone.disabled = false;
       restaurarBotao();
     }
   }
@@ -157,7 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
       pararStream();
       restaurarBotao();
 
-      if (erro?.name === "NotAllowedError") {
+      if (erro?.name === "NotAllowedError" || erro?.name === "SecurityError") {
         mostrarStatus("O acesso ao microfone foi bloqueado pelo dispositivo ou navegador.");
       } else if (erro?.name === "NotFoundError") {
         mostrarStatus("Nenhum microfone foi encontrado neste dispositivo.");
@@ -167,7 +178,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  btnMicrofone.addEventListener("click", async () => {
+  btnMicrofone.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     if (gravando && mediaRecorder) {
       if (mediaRecorder.state !== "inactive") {
         mostrarStatus("Finalizando gravação...");
@@ -179,5 +193,6 @@ document.addEventListener("DOMContentLoaded", () => {
     await iniciarGravacao();
   });
 
+  mostrarStatus("Toque no microfone para gravar uma observação.");
   window.addEventListener("pagehide", pararStream);
 });
