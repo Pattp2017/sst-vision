@@ -12,110 +12,32 @@
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
-  <header class="app-header">
-    <div>
-      <h1>SST Vision</h1>
-      <p>Inspeção assistida por inteligência artificial</p>
-    </div>
-  </header>
-
+  <header class="app-header"><div><h1>SST Vision</h1><p>Inspeção assistida por inteligência artificial</p></div></header>
   <main class="container">
     <section class="card">
-      <div class="card-header">
-        <span class="etapa">Nova inspeção</span>
-        <h2>Dados da inspeção</h2>
-      </div>
-
-      <div class="form-group">
-        <label for="empresa">Empresa / Fazenda</label>
-        <input type="text" id="empresa" placeholder="Informe a empresa ou fazenda" autocomplete="organization">
-      </div>
-
-      <div class="form-group">
-        <label for="setor">Local / Setor</label>
-        <input type="text" id="setor" placeholder="Ex.: Oficina, Armazém, Terreiro">
-      </div>
-
-      <div class="form-group">
-        <label>Tipo de inspeção</label>
-        <div class="tipo-inspecao">
-          <label class="radio-card">
-            <input type="radio" name="tipoInspecao" value="maquina" checked>
-            <span>
-              <strong>Máquina / Equipamento</strong>
-              <small>Análise de condições visíveis da máquina</small>
-            </span>
-          </label>
-
-          <label class="radio-card">
-            <input type="radio" name="tipoInspecao" value="ambiente">
-            <span>
-              <strong>Ambiente de trabalho</strong>
-              <small>Análise visual do local de trabalho</small>
-            </span>
-          </label>
-        </div>
-      </div>
-
-      <div class="form-group" id="grupoEquipamento">
-        <label for="equipamento">
-          Equipamento <span class="opcional">(opcional)</span>
-        </label>
-        <input type="text" id="equipamento" placeholder="Ex.: Trator, esmeril, betoneira">
-        <small class="ajuda">
-          Se não souber, deixe em branco. A identificação poderá ser feita durante a análise.
-        </small>
-      </div>
-
-      <div class="form-group">
-        <label for="observacao">
-          Observação <span class="opcional">(opcional)</span>
-        </label>
-
-        <div class="observacao-com-voz">
-          <textarea id="observacao" rows="4" placeholder="Digite uma observação ou use o microfone"></textarea>
-          <button type="button" id="btnMicrofone" class="btn-microfone" aria-label="Gravar observação por voz" title="Gravar observação por voz">🎤</button>
-        </div>
-
-        <small id="statusMicrofone" class="ajuda" hidden></small>
-      </div>
+      <div class="card-header"><span class="etapa">Nova inspeção</span><h2>Dados da inspeção</h2></div>
+      <div class="form-group"><label for="empresa">Empresa / Fazenda</label><input type="text" id="empresa" placeholder="Informe a empresa ou fazenda" autocomplete="organization"></div>
+      <div class="form-group"><label for="setor">Local / Setor</label><input type="text" id="setor" placeholder="Ex.: Oficina, Armazém, Terreiro"></div>
+      <div class="form-group"><label>Tipo de inspeção</label><div class="tipo-inspecao">
+        <label class="radio-card"><input type="radio" name="tipoInspecao" value="maquina" checked><span><strong>Máquina / Equipamento</strong><small>Análise de condições visíveis da máquina</small></span></label>
+        <label class="radio-card"><input type="radio" name="tipoInspecao" value="ambiente"><span><strong>Ambiente de trabalho</strong><small>Análise visual do local de trabalho</small></span></label>
+      </div></div>
+      <div class="form-group" id="grupoEquipamento"><label for="equipamento">Equipamento <span class="opcional">(opcional)</span></label><input type="text" id="equipamento" placeholder="Ex.: Trator, esmeril, betoneira"><small class="ajuda">Se não souber, deixe em branco. A identificação poderá ser feita durante a análise.</small></div>
+      <div class="form-group"><label for="observacao">Observação <span class="opcional">(opcional)</span></label><div class="observacao-com-voz"><textarea id="observacao" rows="4" placeholder="Digite uma observação ou use o microfone"></textarea><button type="button" id="btnMicrofone" class="btn-microfone" aria-label="Gravar observação por voz" title="Gravar observação por voz">🎤</button></div><small id="statusMicrofone" class="ajuda" hidden></small></div>
     </section>
-
     <section class="card camera-card">
-      <div class="camera-title">
-        <h2>Registro fotográfico</h2>
-        <p>Fotografe a condição que será analisada.</p>
-      </div>
-
-      <div class="camera-area" id="cameraArea">
-        <div class="camera-placeholder">
-          <div class="camera-icon">📷</div>
-          <strong>Nenhuma foto registrada</strong>
-          <span>Utilize a câmera do dispositivo para iniciar a inspeção.</span>
-        </div>
-      </div>
-
+      <div class="camera-title"><h2>Registro fotográfico</h2><p>Fotografe a condição que será analisada.</p></div>
+      <div class="camera-area" id="cameraArea"><div class="camera-placeholder"><div class="camera-icon">📷</div><strong>Nenhuma foto registrada</strong><span>Utilize a câmera do dispositivo para iniciar a inspeção.</span></div></div>
       <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
-
-      <div class="preview-container" id="previewContainer" hidden>
-        <img id="fotoPreview" alt="Foto capturada para inspeção">
-      </div>
-
-      <div class="camera-actions">
-        <button type="button" id="btnAbrirCamera" class="btn btn-primary">📷 Abrir câmera</button>
-        <button type="button" id="btnRefazerFoto" class="btn btn-secondary" hidden>Tirar novamente</button>
-        <button type="button" id="btnUsarFoto" class="btn btn-success" hidden>Usar foto</button>
-      </div>
+      <div class="preview-container" id="previewContainer" hidden><img id="fotoPreview" alt="Foto capturada para inspeção"></div>
+      <small class="ajuda">Após a análise, dê dois toques sobre a foto para incluir um achado manualmente.</small>
+      <div class="camera-actions"><button type="button" id="btnAbrirCamera" class="btn btn-primary">📷 Abrir câmera</button><button type="button" id="btnRefazerFoto" class="btn btn-secondary" hidden>Tirar novamente</button><button type="button" id="btnUsarFoto" class="btn btn-success" hidden>Usar foto</button></div>
     </section>
-
     <div id="mensagem" class="mensagem" hidden></div>
   </main>
-
-  <footer class="app-footer">
-    <p>Análise assistida. Os achados devem ser validados por profissional responsável.</p>
-  </footer>
-
+  <footer class="app-footer"><p>Análise assistida. Os achados devem ser validados por profissional responsável.</p></footer>
   <script src="js/app.js"></script>
   <script src="js/voice.js"></script>
+  <script src="js/manual-achados.js"></script>
 </body>
 </html>
