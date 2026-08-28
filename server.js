@@ -16,7 +16,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(
   express.json({
-    limit: "10mb"
+    limit: "15mb"
   })
 );
 
@@ -49,6 +49,73 @@ app.get("/teste-ia", async (req, res) => {
   }
 });
 
+app.post("/transcrever-audio", async (req, res) => {
+  try {
+    const { audioBase64, mimeType } = req.body;
+
+    if (!audioBase64) {
+      return res.status(400).json({
+        status: "erro",
+        mensagem: "Nenhum áudio recebido."
+      });
+    }
+
+    const tiposPermitidos = [
+      "audio/webm",
+      "audio/mp4",
+      "audio/mpeg",
+      "audio/wav",
+      "audio/ogg"
+    ];
+
+    const tipoRecebido = String(mimeType || "audio/webm")
+      .split(";")[0]
+      .trim()
+      .toLowerCase();
+
+    const tipoAudio = tiposPermitidos.includes(tipoRecebido)
+      ? tipoRecebido
+      : "audio/webm";
+
+    const respostaIA = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: `
+Transcreva fielmente este áudio em português do Brasil.
+O áudio é uma observação de campo de uma inspeção de Segurança e Saúde no Trabalho.
+Retorne somente o texto transcrito, sem explicações, sem Markdown e sem acrescentar informações que não tenham sido faladas.
+Corrija apenas pontuação e capitalização para tornar o texto legível.
+`
+            },
+            {
+              inlineData: {
+                mimeType: tipoAudio,
+                data: audioBase64
+              }
+            }
+          ]
+        }
+      ]
+    });
+
+    return res.json({
+      status: "ok",
+      texto: String(respostaIA.text || "").trim()
+    });
+  } catch (erro) {
+    console.error("Erro ao transcrever áudio:", erro);
+
+    return res.status(500).json({
+      status: "erro",
+      mensagem: "Falha ao transcrever o áudio."
+    });
+  }
+});
+
 app.post("/analisar-imagem", async (req, res) => {
   try {
     const { imagemBase64 } = req.body;
@@ -60,14 +127,14 @@ app.post("/analisar-imagem", async (req, res) => {
       });
     }
 
-const respostaIA = await ai.models.generateContent({
-  model: "gemini-3.5-flash-lite",
-  contents: [
-    {
-      role: "user",
-      parts: [
+    const respostaIA = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: [
         {
-          text: `
+          role: "user",
+          parts: [
+            {
+              text: `
 Você está auxiliando em uma inspeção visual de Segurança e Saúde no Trabalho (SST).
 
 Analise exclusivamente o que estiver visível na fotografia.
@@ -118,23 +185,22 @@ REGRAS DE ANÁLISE:
 - Se não houver achado visual relevante, retorne "achados": [].
 - Preserve a distinção entre condição observada e possível risco.
 `
-        },
-        
-        {
-          inlineData: {
-            mimeType: "image/jpeg",
-            data: imagemBase64
-          }
+            },
+            {
+              inlineData: {
+                mimeType: "image/jpeg",
+                data: imagemBase64
+              }
+            }
+          ]
         }
       ]
-    }
-  ]
-});
+    });
 
-return res.json({
-  status: "ok",
-  analise: respostaIA.text
-});
+    return res.json({
+      status: "ok",
+      analise: respostaIA.text
+    });
   } catch (erro) {
     console.error("Erro ao receber imagem:", erro);
 
