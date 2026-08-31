@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <title>Análises | SST Vision</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f8fafc;color:#0f172a}.topo{background:#0f172a;color:#fff;padding:18px}.topo-inner,.conteudo{max-width:980px;margin:auto}.topo-linha{display:flex;align-items:center;gap:12px}.voltar{color:#fff;text-decoration:none;font-size:22px}.topo h1{margin:0;font-size:24px}.topo p{margin:5px 0 0;color:#cbd5e1}.conteudo{padding:16px}.acoes{display:flex;gap:10px;margin-bottom:14px}.btn{display:inline-block;padding:11px 14px;border-radius:12px;text-decoration:none;font-weight:700;font-size:14px}.btn-primary{background:#0f172a;color:#fff}.filtros{display:grid;grid-template-columns:1.5fr 1fr;gap:10px;margin-bottom:14px}.filtros input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;font-size:15px}.lista{display:grid;gap:10px}.item{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:15px}.item-topo{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.item h3{margin:0 0 6px;font-size:17px}.meta{color:#64748b;font-size:13px;line-height:1.5}.status{display:inline-block;padding:5px 8px;border-radius:999px;background:#dcfce7;color:#166534;font-size:11px;font-weight:700;text-transform:capitalize}.vazio,.erro{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px;text-align:center;color:#64748b}.erro{color:#991b1b;border-color:#fecaca;background:#fff7f7}.carregando{text-align:center;padding:26px;color:#64748b}@media(max-width:640px){.filtros{grid-template-columns:1fr}.item-topo{flex-direction:column}.conteudo{padding:12px}}
+  </style>
+</head>
+<body>
+  <header class="topo"><div class="topo-inner"><div class="topo-linha"><a class="voltar" href="./index.html" aria-label="Voltar">←</a><div><h1>Análises</h1><p>Consulte as análises de risco já salvas.</p></div></div></div></header>
+  <main class="conteudo">
+    <div class="acoes"><a class="btn btn-primary" href="./analise.html">＋ Nova análise</a></div>
+    <div class="filtros"><input id="busca" type="search" placeholder="Buscar empresa, setor ou equipamento"><input id="data" type="date"></div>
+    <div id="resultado" class="carregando">Carregando análises...</div>
+  </main>
+  <script>
+    const API='https://sst-vision.onrender.com';
+    let analises=[];
+    const resultado=document.getElementById('resultado');
+    const busca=document.getElementById('busca');
+    const data=document.getElementById('data');
+
+    function formatarData(valor){if(!valor)return 'Data não informada';const d=new Date(valor);return Number.isNaN(d.getTime())?valor:d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+    function escapar(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+    function render(){const termo=busca.value.trim().toLowerCase();const filtroData=data.value;const filtradas=analises.filter(a=>{const texto=[a.empresa,a.setor,a.equipamento,a.identificacao_descricao].filter(Boolean).join(' ').toLowerCase();const bateTexto=!termo||texto.includes(termo);const dataRegistro=(a.validada_em||a.criado_em||'').slice(0,10);const bateData=!filtroData||dataRegistro===filtroData;return bateTexto&&bateData;});
+      if(!filtradas.length){resultado.className='vazio';resultado.innerHTML='<strong>Nenhuma análise encontrada.</strong><br><span>As análises salvas aparecerão aqui.</span>';return;}
+      resultado.className='lista';resultado.innerHTML=filtradas.map(a=>`<article class="item"><div class="item-topo"><div><h3>${escapar(a.empresa||'Empresa não informada')}</h3><div class="meta"><strong>Local:</strong> ${escapar(a.setor||'-')}<br><strong>Equipamento:</strong> ${escapar(a.equipamento||a.identificacao_descricao||'-')}<br><strong>Data:</strong> ${escapar(formatarData(a.validada_em||a.criado_em))}</div></div><span class="status">${escapar(a.status||'validada')}</span></div></article>`).join('');}
+    async function carregar(){try{const r=await fetch(`${API}/analises`);const d=await r.json();if(!r.ok)throw new Error(d.mensagem||'Falha ao consultar análises.');analises=Array.isArray(d.analises)?d.analises:[];render();}catch(e){resultado.className='erro';resultado.textContent=e.message||'Não foi possível carregar as análises.';}}
+    busca.addEventListener('input',render);data.addEventListener('change',render);carregar();
+    if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));}
+  </script>
+</body>
+</html>
