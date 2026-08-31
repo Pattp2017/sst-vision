@@ -1,9 +1,10 @@
-const CACHE_NAME = "sst-vision-v15";
+const CACHE_NAME = "sst-vision-v16";
 
 const ARQUIVOS_CACHE = [
   "./",
   "./index.html",
   "./analise.html",
+  "./analises.html",
   "./css/style.css",
   "./js/app.js",
   "./js/voice.js",
