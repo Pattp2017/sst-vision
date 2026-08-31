@@ -7,38 +7,35 @@
   <title>SST Vision</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png">
   <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
-  <link rel="stylesheet" href="./css/style.css">
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f8fafc;color:#0f172a}.topo{background:#0f172a;color:#fff;padding:22px 18px}.topo-inner,.conteudo{max-width:980px;margin:auto}.topo h1{margin:0;font-size:28px}.topo p{margin:6px 0 0;color:#cbd5e1}.conteudo{padding:18px}.secao{margin-bottom:24px}.secao h2{font-size:18px;margin:0 0 12px}.grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{display:block;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:18px;text-decoration:none;color:inherit;box-shadow:0 3px 12px rgba(15,23,42,.05)}.card.ativo{border-color:#94a3b8}.card h3{margin:8px 0 6px;font-size:18px}.card p{margin:0;color:#64748b;font-size:14px;line-height:1.45}.icone{font-size:25px}.status{display:inline-block;margin-top:12px;padding:5px 9px;border-radius:999px;background:#e2e8f0;color:#475569;font-size:12px;font-weight:700}.status.disponivel{background:#dcfce7;color:#166534}.modulo{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:16px}.modulo-topo{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.modulo-topo h2{margin:0}.subgrade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.acao{display:block;padding:16px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;text-decoration:none;color:#0f172a}.acao strong{display:block;margin-bottom:5px}.acao span{font-size:13px;color:#64748b}.acao.principal{background:#0f172a;color:#fff;border-color:#0f172a}.acao.principal span{color:#cbd5e1}.acao.bloqueada{opacity:.55;cursor:not-allowed}.rodape{text-align:center;color:#64748b;font-size:12px;padding:8px 18px 24px}@media(max-width:640px){.grade,.subgrade{grid-template-columns:1fr}.conteudo{padding:14px}.card,.modulo{border-radius:14px}.topo h1{font-size:24px}}
+  </style>
 </head>
 <body>
-  <header class="app-header"><div><h1>SST Vision</h1><p>Inspeção assistida por inteligência artificial</p></div></header>
-  <main class="container">
-    <section class="card">
-      <div class="card-header"><span class="etapa">Nova inspeção</span><h2>Dados da inspeção</h2></div>
-      <div class="form-group"><label for="empresa">Empresa / Fazenda</label><input type="text" id="empresa" placeholder="Informe a empresa ou fazenda" autocomplete="organization"></div>
-      <div class="form-group"><label for="setor">Local / Setor</label><input type="text" id="setor" placeholder="Ex.: Oficina, Armazém, Terreiro"></div>
-      <div class="form-group"><label>Tipo de inspeção</label><div class="tipo-inspecao">
-        <label class="radio-card"><input type="radio" name="tipoInspecao" value="maquina" checked><span><strong>Máquina / Equipamento</strong><small>Análise de condições visíveis da máquina</small></span></label>
-        <label class="radio-card"><input type="radio" name="tipoInspecao" value="ambiente"><span><strong>Ambiente de trabalho</strong><small>Análise visual do local de trabalho</small></span></label>
-      </div></div>
-      <div class="form-group" id="grupoEquipamento"><label for="equipamento">Equipamento <span class="opcional">(opcional)</span></label><input type="text" id="equipamento" placeholder="Ex.: Trator, esmeril, betoneira"><small class="ajuda">Se não souber, deixe em branco. A identificação poderá ser feita durante a análise.</small></div>
-      <div class="form-group"><label for="observacao">Observação <span class="opcional">(opcional)</span></label><div class="observacao-com-voz"><textarea id="observacao" rows="4" placeholder="Digite uma observação ou use o microfone"></textarea><button type="button" id="btnMicrofone" class="btn-microfone" aria-label="Gravar observação por voz" title="Gravar observação por voz">🎤</button></div><small id="statusMicrofone" class="ajuda" hidden></small></div>
+  <header class="topo"><div class="topo-inner"><h1>SST Vision</h1><p>Plataforma de apoio técnico para Segurança e Saúde no Trabalho</p></div></header>
+  <main class="conteudo">
+    <section class="secao">
+      <h2>Cadastros</h2>
+      <div class="grade">
+        <div class="card ativo"><div class="icone">🏢</div><h3>Cadastros gerais</h3><p>Centro para empresas/fazendas, ambientes, máquinas, equipamentos, pessoas e demais registros que serão usados pelos módulos.</p><span class="status">Estrutura inicial</span></div>
+      </div>
     </section>
-    <section class="card camera-card">
-      <div class="camera-title"><h2>Registro fotográfico</h2><p>Fotografe a condição que será analisada.</p></div>
-      <div class="camera-area" id="cameraArea"><div class="camera-placeholder"><div class="camera-icon">📷</div><strong>Nenhuma foto registrada</strong><span>Utilize a câmera do dispositivo para iniciar a inspeção.</span></div></div>
-      <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
-      <div class="preview-container" id="previewContainer" hidden><img id="fotoPreview" alt="Foto capturada para inspeção"></div>
-      <small class="ajuda">Após a análise, dê dois toques sobre a foto para incluir um achado manualmente.</small>
-      <div class="camera-actions"><button type="button" id="btnAbrirCamera" class="btn btn-primary">📷 Abrir câmera</button><button type="button" id="btnRefazerFoto" class="btn btn-secondary" hidden>Tirar novamente</button><button type="button" id="btnUsarFoto" class="btn btn-success" hidden>Usar foto</button></div>
+    <section class="secao modulo">
+      <div class="modulo-topo"><div><h2>Módulo SST</h2><p style="margin:5px 0 0;color:#64748b;font-size:14px">Primeiro módulo habilitado do Vision.</p></div><span class="status disponivel">Ativo</span></div>
+      <h3 style="font-size:15px;margin:18px 0 10px">Análise de Risco</h3>
+      <div class="subgrade">
+        <a class="acao principal" href="./analise.html"><strong>＋ Nova análise</strong><span>Iniciar uma nova análise por foto.</span></a>
+        <div class="acao bloqueada"><strong>📋 Análises</strong><span>Consultar análises salvas. Em preparação.</span></div>
+      </div>
+      <h3 style="font-size:15px;margin:20px 0 10px">Próximos recursos</h3>
+      <div class="subgrade">
+        <div class="acao bloqueada"><strong>🦺 EPIs</strong><span>Disponível em fase futura.</span></div>
+        <div class="acao bloqueada"><strong>🎓 Treinamentos</strong><span>Disponível em fase futura.</span></div>
+      </div>
     </section>
-    <div id="mensagem" class="mensagem" hidden></div>
   </main>
-  <footer class="app-footer"><p>Análise assistida. Os achados devem ser validados por profissional responsável.</p></footer>
-  <script src="js/app.js"></script>
-  <script src="js/voice.js"></script>
-  <script src="js/manual-achados.js"></script>
-  <script src="js/validacao.js"></script>
+  <footer class="rodape">O Vision apoia a análise técnica. A validação final permanece com o profissional responsável.</footer>
+  <script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));}</script>
 </body>
 </html>
