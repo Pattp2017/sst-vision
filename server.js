@@ -29,7 +29,39 @@ app.get("/teste-ia", async(req,res)=>{try{const r=await ai.models.generateConten
 
 app.post("/transcrever-audio",async(req,res)=>{try{const{audioBase64,mimeType}=req.body;if(!audioBase64)return res.status(400).json({status:"erro",mensagem:"Nenhum áudio recebido."});const permitidos=["audio/webm","audio/mp4","audio/mpeg","audio/wav","audio/ogg"];const recebido=String(mimeType||"audio/webm").split(";")[0].trim().toLowerCase();const tipo=permitidos.includes(recebido)?recebido:"audio/webm";const r=await ai.models.generateContent({model:"gemini-3.5-flash-lite",contents:[{role:"user",parts:[{text:"Transcreva fielmente este áudio em português do Brasil. O áudio é uma observação de campo de uma inspeção de Segurança e Saúde no Trabalho. Retorne somente o texto transcrito, sem explicações e sem acrescentar informações. Corrija apenas pontuação e capitalização."},{inlineData:{mimeType:tipo,data:audioBase64}}]}]});return res.json({status:"ok",texto:String(r.text||"").trim()});}catch(e){console.error(e);return res.status(500).json({status:"erro",mensagem:"Falha ao transcrever o áudio."});}});
 
-app.post("/analisar-imagem",async(req,res)=>{try{const{imagemBase64}=req.body;if(!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Nenhuma imagem recebida."});const r=await ai.models.generateContent({model:"gemini-3.5-flash-lite",contents:[{role:"user",parts:[{text:`Você está auxiliando em uma inspeção visual de Segurança e Saúde no Trabalho (SST). Analise exclusivamente o que estiver visível na fotografia. Retorne SOMENTE um JSON válido, sem Markdown e sem texto antes ou depois. Use exatamente esta estrutura: {"identificacao":{"tipo":"maquina | equipamento | ambiente | nao_identificado","descricao":"descrição objetiva do que foi identificado","confianca":"baixa | media | alta"},"achados":[{"id":1,"titulo":"nome curto do achado","observado":"descrição somente do que é visível","possivel_risco":"risco relacionado ao que foi observado","confianca":"baixa | media | alta","posicao":{"x":50,"y":50}}],"limitacoes":["informação que não pode ser confirmada somente pela fotografia"]}. REGRAS: x e y de 0 a 100 e indicam aproximadamente o centro visual do achado. Não invente componentes. Não trate hipótese como fato. Não presuma ausência de proteção quando a região não estiver visível. Não declare conformidade ou não conformidade legal. Não cite NR. Se não houver achado visual relevante, retorne achados vazio. Preserve a distinção entre condição observada e possível risco.`},{inlineData:{mimeType:"image/jpeg",data:imagemBase64}}]}]});return res.json({status:"ok",analise:r.text});}catch(e){console.error(e);return res.status(500).json({status:"erro",mensagem:"Falha ao processar a imagem."});}});
+const PROMPT_INSPECAO_VISUAL = `Você está auxiliando um profissional em uma inspeção visual de Segurança e Saúde no Trabalho (SST).
+
+Analise EXCLUSIVAMENTE o que estiver visível na fotografia. Antes de gerar a resposta, faça uma varredura visual sistemática de TODA a cena e verifique, quando aplicável, as seguintes categorias:
+1. organização, arranjo físico, circulação e acesso: objetos, materiais, cabos, obstáculos, passagens e espaço de trabalho;
+2. ergonomia visualmente observável: postura claramente visível, alcance, espaço para movimentação e disposição do posto;
+3. máquinas e equipamentos: partes móveis visíveis, transmissões, zonas de esmagamento/cisalhamento, proteções visíveis e acesso a zonas perigosas;
+4. eletricidade: cabos, tomadas, extensões, conexões, painéis e partes elétricas visíveis;
+5. quedas e diferenças de nível: piso, escadas, plataformas, aberturas, bordas e acessos;
+6. incêndio e emergência: obstruções, armazenamento e condições visualmente observáveis relacionadas a recursos de emergência;
+7. agentes e produtos visíveis: recipientes, derramamentos, poeira, fumaça, névoa ou outras condições que possam ser constatadas visualmente;
+8. interação entre pessoa, equipamento e ambiente, quando houver pessoas ou atividade visível.
+
+A lista é um roteiro de inspeção, NÃO uma obrigação de criar achados em todas as categorias. Registre somente condições realmente visíveis e potencialmente relevantes para SST. Não omita uma condição visível apenas por parecer secundária. Não crie achados genéricos sem evidência visual.
+
+Retorne SOMENTE um JSON válido, sem Markdown e sem texto antes ou depois. Use exatamente esta estrutura:
+{"identificacao":{"tipo":"maquina | equipamento | ambiente | nao_identificado","descricao":"descrição objetiva do que foi identificado","confianca":"baixa | media | alta"},"achados":[{"id":1,"categoria":"organizacao_circulacao | ergonomia | maquinas_equipamentos | eletricidade | quedas_nivel | incendio_emergencia | agentes_produtos | interacao_atividade | outra","titulo":"nome curto do achado","observado":"descrição objetiva somente do que é visível","perigo":"fonte, situação ou condição com potencial de causar lesão ou agravo, sem inventar informação","evento_possivel":"evento perigoso plausível relacionado ao observado, sem tratá-lo como fato","possivel_consequencia":"possível lesão ou agravo, somente quando houver base visual suficiente","possivel_risco":"síntese do risco relacionado ao que foi observado","confianca":"baixa | media | alta","posicao":{"x":50,"y":50}}],"limitacoes":["informação relevante que não pode ser confirmada somente pela fotografia"]}.
+
+REGRAS OBRIGATÓRIAS:
+- x e y variam de 0 a 100 e indicam aproximadamente o centro visual do achado.
+- Não invente componentes, pessoas, atividades, condições ou defeitos.
+- Não trate hipótese como fato observado.
+- Não presuma ausência de proteção quando a região correspondente não estiver visível.
+- Não conclua que um EPI está ausente se não for possível confirmar que a atividade exige aquele EPI apenas pela imagem.
+- Não declare conformidade ou não conformidade legal.
+- Não cite NR, NBR ou legislação.
+- Não inferira níveis de ruído, temperatura, concentração, tensão elétrica, peso, velocidade ou qualquer grandeza não mensurável pela fotografia.
+- Não diagnostique exposição ocupacional apenas pela presença visual de um agente.
+- Preserve rigorosamente a distinção entre observado, perigo, evento possível e possível consequência.
+- Use confiança baixa quando a condição estiver parcialmente visível ou ambígua.
+- Se, após a varredura completa, não houver condição visual relevante, retorne achados vazio.
+- Priorize cobertura da cena sem repetir o mesmo achado com títulos diferentes.`;
+
+app.post("/analisar-imagem",async(req,res)=>{try{const{imagemBase64}=req.body;if(!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Nenhuma imagem recebida."});const r=await ai.models.generateContent({model:"gemini-3.5-flash-lite",contents:[{role:"user",parts:[{text:PROMPT_INSPECAO_VISUAL},{inlineData:{mimeType:"image/jpeg",data:imagemBase64}}]}]});return res.json({status:"ok",analise:r.text});}catch(e){console.error(e);return res.status(500).json({status:"erro",mensagem:"Falha ao processar a imagem."});}});
 
 function registrosAchados(analiseId, achados) {
   return (Array.isArray(achados)?achados:[]).map((a,i)=>({analise_id:analiseId,numero:Number(a.numero??a.id??i+1),titulo:a.titulo||null,observado:a.observado||a.descricao||null,possivel_risco:a.possivel_risco||a.risco||null,confianca:a.confianca||null,posicao_x:Number(a.x??a.posicao?.x??50),posicao_y:Number(a.y??a.posicao?.y??50),origem:a.origem==="manual"||a.manual?"manual":"ia",editado:Boolean(a.editado)}));
