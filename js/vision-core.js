@@ -72,6 +72,47 @@
     }
   }
 
+  function localizarAchado(numero) {
+    const lista = window.sstAnaliseAtual?.achados;
+    if (!Array.isArray(lista)) return null;
+    return lista.find((a, i) => String(a.numero ?? a.id ?? i + 1) === String(numero)) || null;
+  }
+
+  function numeroPainelAchado() {
+    const painel = document.getElementById("painelAchado");
+    const texto = painel?.querySelector(".painel-achado-topo strong")?.textContent || "";
+    return texto.match(/(?:Editar achado\s+)?(\d+)/i)?.[1] || null;
+  }
+
+  // O app original mantém o objeto do achado em escopo privado. Estes listeners
+  // sincronizam edições e rejeições com o snapshot técnico preservado pelo núcleo.
+  document.addEventListener("click", (event) => {
+    const alvo = event.target;
+    if (!(alvo instanceof Element)) return;
+
+    if (alvo.closest("#btnSalvarAchado")) {
+      const numero = numeroPainelAchado();
+      const achado = localizarAchado(numero);
+      if (!achado) return;
+
+      achado.titulo = document.getElementById("editarTituloAchado")?.value?.trim() || achado.titulo;
+      achado.observado = document.getElementById("editarObservadoAchado")?.value?.trim() || null;
+      achado.possivel_risco = document.getElementById("editarRiscoAchado")?.value?.trim() || null;
+      achado.editado = true;
+      achado.status_validacao = "pendente";
+      achado.decisao_profissional = null;
+    }
+
+    if (alvo.closest("#btnExcluirAchado")) {
+      const numero = numeroPainelAchado();
+      const achado = localizarAchado(numero);
+      if (!achado) return;
+      achado.excluido = true;
+      achado.status_validacao = "rejeitado";
+      achado.decisao_profissional = "rejeitado";
+    }
+  }, true);
+
   window.sstVisionCore = {
     normalizarAchado,
     normalizarAnalise,
