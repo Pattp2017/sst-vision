@@ -29,12 +29,72 @@ document.addEventListener("DOMContentLoaded", () => {
   const observer=new MutationObserver(mostrarValidar);observer.observe(preview,{childList:true,subtree:false});if(mensagem)observer.observe(mensagem,{childList:true,characterData:true,subtree:true});
 
   async function imagemAtualBase64(){const r=await fetch(foto.src),b=await r.blob();return await new Promise((resolve,reject)=>{const l=new FileReader();l.onload=()=>resolve(String(l.result).split(",")[1]);l.onerror=reject;l.readAsDataURL(b);});}
-  function montarAchados(){const manuais=(window.sstManualAchados||[]).filter(a=>!a.excluido),map=new Map(manuais.map(a=>[String(a.id),a]));return [...preview.querySelectorAll(".marcador-risco")].map((m,i)=>{const n=String(m.dataset.numero||m.textContent||i+1),manual=map.get(n);if(manual)return{...manual,numero:Number(n),origem:"manual"};return{numero:Number(n),titulo:m.title||`Achado ${n}`,x:parseFloat(m.style.left)||50,y:parseFloat(m.style.top)||50,origem:"ia"};});}
+
+  function montarAchados(){
+    const manuais=(window.sstManualAchados||[]).filter(a=>!a.excluido);
+    const manuaisPorId=new Map(manuais.map(a=>[String(a.id),a]));
+    const analiseIA=window.sstVisionCore?.obterAnaliseAtual?.()||window.sstAnaliseAtual||null;
+    const achadosIA=Array.isArray(analiseIA?.achados)?analiseIA.achados:[];
+    const iaPorId=new Map(achadosIA.map((a,i)=>[String(a.numero??a.id??i+1),a]));
+    const idsVisiveis=new Set();
+
+    const confirmados=[...preview.querySelectorAll(".marcador-risco")].map((m,i)=>{
+      const n=String(m.dataset.numero||m.textContent||i+1);
+      idsVisiveis.add(n);
+      const manual=manuaisPorId.get(n);
+
+      if(manual){
+        return {
+          ...manual,
+          numero:Number(n),
+          origem:"manual",
+          status_validacao:"confirmado",
+          decisao_profissional:"aceito",
+          requer_confirmacao_humana:false
+        };
+      }
+
+      const original=iaPorId.get(n)||{};
+      return {
+        ...original,
+        numero:Number(n),
+        id:Number(original.id??n),
+        titulo:original.titulo||m.title||`Achado ${n}`,
+        x:parseFloat(m.style.left)||original.posicao?.x||50,
+        y:parseFloat(m.style.top)||original.posicao?.y||50,
+        posicao:{
+          x:parseFloat(m.style.left)||original.posicao?.x||50,
+          y:parseFloat(m.style.top)||original.posicao?.y||50
+        },
+        origem:"ia",
+        status_validacao:"confirmado",
+        decisao_profissional:"aceito",
+        requer_confirmacao_humana:false
+      };
+    });
+
+    // Sugestões da IA removidas pelo profissional não desaparecem do histórico.
+    // Elas seguem marcadas como rejeitadas para rastreabilidade, mas o backend
+    // mantém fallback para bancos antigos que ainda não possuem os novos campos.
+    const rejeitados=achadosIA
+      .filter((a,i)=>!idsVisiveis.has(String(a.numero??a.id??i+1)))
+      .map((a,i)=>({
+        ...a,
+        numero:Number(a.numero??a.id??i+1),
+        origem:"ia",
+        excluido:true,
+        status_validacao:"rejeitado",
+        decisao_profissional:"rejeitado",
+        requer_confirmacao_humana:false
+      }));
+
+    return [...confirmados,...rejeitados];
+  }
 
   function prepararNovaAnalise(){const empresa=document.getElementById("empresa")?.value.trim()||"",setor=document.getElementById("setor")?.value.trim()||"",tipoAnalise=document.querySelector('input[name="tipoInspecao"]:checked')?.value||"maquina";sessionStorage.setItem("sstVisionNovaAnalise",JSON.stringify({empresa,setor,tipoAnalise}));window.location.reload();}
 
   function prepararFotoAdicional(){
-    modoFotoAdicional=true; window.sstAnaliseValidada=null; btnMais.hidden=true; btnValidar.hidden=true; btnValidar.disabled=false;btnValidar.textContent="✓ Validar nova foto";btnValidar.classList.remove("validada");
+    modoFotoAdicional=true; window.sstAnaliseValidada=null; window.sstAnaliseAtual=null; btnMais.hidden=true; btnValidar.hidden=true; btnValidar.disabled=false;btnValidar.textContent="✓ Validar nova foto";btnValidar.classList.remove("validada");
     btnUsarFoto.textContent="Usar foto";btnUsarFoto.classList.remove("btn-primary");btnUsarFoto.classList.add("btn-success");btnUsarFoto.onclick=null;
     if(btnRefazerFoto)btnRefazerFoto.hidden=true;
     preview.querySelectorAll(".marcador-risco").forEach(m=>m.remove()); document.getElementById("painelAchado")?.remove();document.getElementById("painelAchadoManual")?.remove();
@@ -46,12 +106,19 @@ document.addEventListener("DOMContentLoaded", () => {
   btnMais.addEventListener("click",prepararFotoAdicional);
 
   btnValidar.addEventListener("click",async()=>{
-    if(btnValidar.disabled)return;const empresa=document.getElementById("empresa")?.value.trim(),setor=document.getElementById("setor")?.value.trim(),tipoAnalise=document.querySelector('input[name="tipoInspecao"]:checked')?.value,equipamento=document.getElementById("equipamento")?.value.trim(),observacao=document.getElementById("observacao")?.value.trim();if(!empresa||!setor||!tipoAnalise||!foto.src)return;
+    if(btnValidar.disabled)return;
+    const empresa=document.getElementById("empresa")?.value.trim(),setor=document.getElementById("setor")?.value.trim(),tipoAnalise=document.querySelector('input[name="tipoInspecao"]:checked')?.value,equipamento=document.getElementById("equipamento")?.value.trim(),observacao=document.getElementById("observacao")?.value.trim();if(!empresa||!setor||!tipoAnalise||!foto.src)return;
     const marcadores=[...preview.querySelectorAll(".marcador-risco")];btnValidar.disabled=true;btnValidar.textContent=modoFotoAdicional?"Salvando nova foto...":"Salvando análise...";
     try{
-      const imagemBase64=await imagemAtualBase64(),achados=montarAchados(),texto=mensagem?.textContent||"",descricao=texto.match(/Identificado:\s*(.*?)(?:\s*\||$)/)?.[1]||null;
+      const imagemBase64=await imagemAtualBase64();
+      const achados=montarAchados();
+      const analiseEstruturada=window.sstVisionCore?.obterAnaliseAtual?.()||window.sstAnaliseAtual||{};
+      const texto=mensagem?.textContent||"";
+      const descricao=analiseEstruturada.identificacao?.descricao||texto.match(/Identificado:\s*(.*?)(?:\s*\||$)/)?.[1]||null;
       const endpoint=modoFotoAdicional?"adicionar-foto-analise":"salvar-analise";
-      const body=modoFotoAdicional?{analiseId:analiseIdAtual,achados,imagemBase64}:{empresa,setor,tipoAnalise,equipamento,observacao,identificacao:{descricao},achados,imagemBase64};
+      const body=modoFotoAdicional
+        ?{analiseId:analiseIdAtual,achados,imagemBase64,contexto:analiseEstruturada.contexto||null,limitacoes:analiseEstruturada.limitacoes||[]}
+        :{empresa,setor,tipoAnalise,equipamento,observacao,identificacao:{...(analiseEstruturada.identificacao||{}),descricao},contexto:analiseEstruturada.contexto||null,limitacoes:analiseEstruturada.limitacoes||[],achados,imagemBase64};
       const resposta=await fetch(`https://sst-vision.onrender.com/${endpoint}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),dados=await resposta.json();if(!resposta.ok)throw new Error(dados.mensagem||"Falha ao salvar.");
       analiseIdAtual=dados.analiseId;window.sstAnaliseValidada={validada:true,salva:true,analiseId:analiseIdAtual,validadaEm:new Date().toISOString(),quantidadeAchados:marcadores.length};
       document.getElementById("painelAchado")?.remove();document.getElementById("painelAchadoManual")?.remove();btnValidar.textContent=modoFotoAdicional?`✓ Foto ${dados.ordemFoto} validada e salva`:"✓ Análise validada e salva";btnValidar.classList.add("validada");marcadores.forEach(m=>m.classList.add("marcador-validado"));
