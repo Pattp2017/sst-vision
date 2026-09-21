@@ -19,15 +19,26 @@ document.addEventListener("DOMContentLoaded", () => {
     return n;
   }
 
-  function acharAchado(numero) {
+  function acharAchado(marcador) {
     const achados = analiseAtual?.achados;
     if (!Array.isArray(achados)) return null;
-    return achados.find((a, i) => String(a.id ?? a.numero ?? i + 1) === String(numero)) || null;
+
+    // O índice do array é a referência estável da interface.
+    // Não dependemos do id produzido pela IA, que pode vir repetido.
+    const indice = Number(marcador.dataset.indiceAchado);
+    if (Number.isInteger(indice) && indice >= 0 && indice < achados.length) {
+      return achados[indice];
+    }
+
+    // Compatibilidade com marcadores antigos.
+    const numero = Number(marcador.dataset.numero || marcador.textContent?.trim());
+    return Number.isInteger(numero) && numero > 0
+      ? achados[numero - 1] || null
+      : null;
   }
 
   function corrigirMarcador(marcador) {
-    const numero = marcador.dataset.numero || marcador.textContent?.trim();
-    const achado = acharAchado(numero);
+    const achado = acharAchado(marcador);
     if (!achado) return;
 
     const xOriginal = achado.x ?? achado.posicao?.x ?? achado.coordenadas?.x;
