@@ -497,7 +497,7 @@ document.addEventListener("DOMContentLoaded", () => {
       exibirMensagem("Executando nova análise experimental...");
       const imagemComprimida = await comprimirImagem(fotoSelecionada);
       const imagemBase64 = await arquivoParaBase64(imagemComprimida);
-      const resposta = await fetch("https://sst-vision.onrender.com/analisar-imagem-experimental", {
+      const resposta = await fetch("https://sst-vision-teste.onrender.com/analisar-imagem-experimental", {
         method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({imagemBase64})
       });
       const dados = await resposta.json();
