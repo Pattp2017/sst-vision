@@ -25,13 +25,14 @@
       </div></div>
       </section>
     <section class="card camera-card">
-      <div class="form-group"><label for="observacao">Observação <span class="opcional">(opcional)</span></label><div class="observacao-com-voz"><textarea id="observacao" rows="4" placeholder="Digite uma observação ou use o microfone"></textarea><button type="button" id="btnMicrofone" class="btn-microfone" aria-label="Gravar observação por voz" title="Gravar observação por voz">🎤</button></div><small id="statusMicrofone" class="ajuda" hidden></small></div>
+      
       <div class="camera-title"><h2>Evidência de campo</h2><p>Registre a condição que será analisada. Nesta fase, a evidência utilizada é fotográfica.</p></div>
       <div class="camera-area" id="cameraArea"><div class="camera-placeholder"><div class="camera-icon">📷</div><strong>Nenhuma evidência registrada</strong><span>Utilize a câmera do dispositivo para iniciar a inspeção.</span></div></div>
       <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
       <div class="preview-container" id="previewContainer" hidden><img id="fotoPreview" alt="Evidência fotográfica capturada para inspeção"></div>
       <small class="ajuda">Após a análise, dê dois toques sobre a foto para incluir um achado manualmente.</small>
       <div class="camera-actions"><button type="button" id="btnAbrirCamera" class="btn btn-primary">📷 Abrir câmera</button><button type="button" id="btnRefazerFoto" class="btn btn-secondary" hidden>Tirar novamente</button><button type="button" id="btnUsarFoto" class="btn btn-success" hidden>Usar foto</button><button type="button" id="btnTestarNovaAnalise" class="btn btn-secondary" hidden>🧪 Testar nova análise</button></div>
+      <div class="form-group"><label for="observacao">Observação <span class="opcional">(opcional)</span></label><div class="observacao-com-voz"><textarea id="observacao" rows="4" placeholder="Digite uma observação ou use o microfone"></textarea><button type="button" id="btnMicrofone" class="btn-microfone" aria-label="Gravar observação por voz" title="Gravar observação por voz">🎤</button></div><small id="statusMicrofone" class="ajuda" hidden></small></div>
     </section>
     <div id="mensagem" class="mensagem" hidden></div>
   </main>
