@@ -71,29 +71,48 @@ app.post("/analisar-imagem-experimental",async(req,res)=>{try{
   if(!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Nenhuma imagem recebida."});
   const imagem={inlineData:{mimeType:"image/jpeg",data:imagemBase64}};
 
-  const inventarioResp=await ai.models.generateContent({
-    model:"gemini-3.5-flash-lite",
-    contents:[{role:"user",parts:[{text:PROMPT_INVENTARIO_VISUAL},imagem]}]
-  });
-  const inventario=extrairJsonIA(inventarioResp.text);
-  if(!inventario)return res.status(502).json({status:"erro",mensagem:"A etapa de inventário visual não retornou JSON válido."});
+  // Duas leituras independentes da MESMA imagem. Nenhuma leitura condiciona a outra.
+  const [respA,respB]=await Promise.all([
+    ai.models.generateContent({
+      model:"gemini-3.5-flash-lite",
+      contents:[{role:"user",parts:[{text:PROMPT_INSPECAO_VISUAL},imagem]}]
+    }),
+    ai.models.generateContent({
+      model:"gemini-3.5-flash-lite",
+      contents:[{role:"user",parts:[{text:PROMPT_INSPECAO_VISUAL+"\n\nSEGUNDA VARREDURA INDEPENDENTE: examine novamente toda a imagem, com atenção especial a detalhes pequenos, organização, ergonomia visual, cabos/conexões, acessos, proteções, apoios/suportes e regiões periféricas. Não presuma que a primeira leitura encontrou algo e não invente achados."},imagem]}]
+    })
+  ]);
 
-  const contextoInventario="INVENTÁRIO VISUAL DA PRIMEIRA ETAPA (não é conclusão de risco):\n"+JSON.stringify(inventario);
-  const interpretacaoResp=await ai.models.generateContent({
-    model:"gemini-3.5-flash-lite",
-    contents:[{role:"user",parts:[
-      {text:PROMPT_INSPECAO_VISUAL+"\n\n"+contextoInventario+"\n\nUse o inventário como apoio de varredura, mas confira tudo novamente na própria imagem. Não crie achado apenas porque um item consta no inventário."},
-      imagem
-    ]}]
-  });
-  const analise=extrairJsonIA(interpretacaoResp.text);
-  if(!analise)return res.status(502).json({status:"erro",mensagem:"A etapa de interpretação SST não retornou JSON válido.",inventario});
+  const analiseA=extrairJsonIA(respA.text);
+  const analiseB=extrairJsonIA(respB.text);
+  if(!analiseA||!analiseB)return res.status(502).json({status:"erro",mensagem:"Uma das varreduras não retornou JSON válido."});
+
+  const achadosA=Array.isArray(analiseA.achados)?analiseA.achados:[];
+  const achadosB=Array.isArray(analiseB.achados)?analiseB.achados:[];
+
+  // Para o teste, preservamos TODOS os achados. Não há descarte automático.
+  const combinados=[
+    ...achadosA.map(a=>({...a,origem_varredura:"A"})),
+    ...achadosB.map(a=>({...a,origem_varredura:"B"}))
+  ].map((a,i)=>({...a,id:i+1,requer_confirmacao_humana:true}));
+
+  const analise={
+    ...analiseA,
+    achados:combinados,
+    verificacoes_recomendadas:[
+      ...(Array.isArray(analiseA.verificacoes_recomendadas)?analiseA.verificacoes_recomendadas:[]),
+      ...(Array.isArray(analiseB.verificacoes_recomendadas)?analiseB.verificacoes_recomendadas:[])
+    ],
+    principios:{...(analiseA.principios||{}),validacao_humana_obrigatoria:true}
+  };
 
   return res.json({
     status:"ok",
-    modo:"experimental_duas_etapas",
-    aviso:"A primeira etapa inventaria evidências visuais; a segunda sugere interpretação SST. Validação humana permanece obrigatória.",
-    inventario_visual:inventario,
+    modo:"experimental_dupla_varredura_independente",
+    aviso:"Duas varreduras independentes foram realizadas. Nenhum achado foi descartado automaticamente; a validação humana é obrigatória.",
+    comparacao:{achados_varredura_a:achadosA.length,achados_varredura_b:achadosB.length,total_sugestoes:combinados.length},
+    analise_a:analiseA,
+    analise_b:analiseB,
     analise
   });
 }catch(e){console.error(e);return res.status(500).json({status:"erro",mensagem:"Falha na análise visual experimental."});}});
