@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnAbrirCamera = document.getElementById("btnAbrirCamera");
   const btnRefazerFoto = document.getElementById("btnRefazerFoto");
   const btnUsarFoto = document.getElementById("btnUsarFoto");
+  const btnTestarNovaAnalise = document.getElementById("btnTestarNovaAnalise");
   const btnMicrofone = document.getElementById("btnMicrofone");
 
   const cameraArea = document.getElementById("cameraArea");
@@ -215,6 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnRefazerFoto.hidden = false;
 
     btnUsarFoto.hidden = false;
+    if (btnTestarNovaAnalise) btnTestarNovaAnalise.hidden = false;
 
 
     removerMarcadores();
@@ -485,6 +487,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
   });
 
+
+  // -------------------------------------------------------
+  // TESTE EXPERIMENTAL EM DUAS ETAPAS
+  // -------------------------------------------------------
+  if (btnTestarNovaAnalise) btnTestarNovaAnalise.addEventListener("click", async () => {
+    if (!fotoSelecionada) return exibirMensagem("Registre uma fotografia antes de testar.");
+    try {
+      exibirMensagem("Executando nova análise experimental...");
+      const imagemComprimida = await comprimirImagem(fotoSelecionada);
+      const imagemBase64 = await arquivoParaBase64(imagemComprimida);
+      const resposta = await fetch("https://sst-vision.onrender.com/analisar-imagem-experimental", {
+        method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({imagemBase64})
+      });
+      const dados = await resposta.json();
+      if (!resposta.ok) throw new Error(dados.mensagem || "Falha na análise experimental.");
+      const analise = dados.analise;
+      analiseAtual = analise;
+      removerMarcadores(); fecharPainelAchado();
+      const achados = Array.isArray(analise?.achados) ? analise.achados : [];
+      achados.forEach((achado, indice) => criarMarcador(achado, indice));
+      console.log("INVENTÁRIO VISUAL EXPERIMENTAL:", dados.inventario_visual);
+      console.log("ANÁLISE SST EXPERIMENTAL:", analise);
+      const descricao = analise?.identificacao?.descricao || "Cenário não identificado";
+      exibirMensagem(`🧪 Experimental | Identificado: ${descricao} | Achados: ${achados.length}`);
+    } catch (erro) {
+      console.error("Erro na análise experimental:", erro);
+      exibirMensagem("Não foi possível executar a análise experimental.");
+    }
+  });
 
   // -------------------------------------------------------
   // CRIAR MARCADOR DE RISCO
@@ -1266,6 +1297,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     btnUsarFoto.hidden =
       true;
+
+    if (btnTestarNovaAnalise) btnTestarNovaAnalise.hidden = true;
 
 
     ocultarMensagem();
