@@ -52,6 +52,52 @@ Retorne SOMENTE JSON válido:
 
 x e y vão de 0 a 100. Se não houver condição relevante claramente visível, achados pode ser vazio. Verificações recomendadas não são achados nem riscos confirmados.`;
 
+const PROMPT_INVENTARIO_VISUAL=`Você é a primeira etapa de uma análise visual assistida para SST. NÃO avalie risco, NÃO cite normas e NÃO conclua conformidade. Sua única função é inventariar elementos e condições VISÍVEIS na fotografia de forma objetiva, para uma segunda etapa de interpretação humana/assistida.
+
+Varra sistematicamente: primeiro plano, centro, fundo, esquerda, direita, piso, superfícies, cabos/conexões, acessos, máquinas/equipamentos, proteções visíveis, objetos e pessoas.
+
+Retorne SOMENTE JSON válido:
+{"elementos":[{"id":1,"classe":"objeto | equipamento | componente | cabo_conexao | acesso | superficie | pessoa | outro","descricao":"o que é visível sem inferência","condicao_visual":"condição literalmente observável ou null","posicao":{"x":50,"y":50},"confianca":"baixa | media | alta"}],"zonas_nao_avaliaveis":["regiões ocultas, fora do quadro ou sem detalhe suficiente"],"qualidade_imagem":{"adequada":true,"observacao":"texto curto"}}.
+
+Não invente identidade específica de componente. Se houver dúvida, use descrição genérica. Não transforme um objeto visível em perigo. Não diga que algo está seguro ou inseguro.`;
+
+function extrairJsonIA(texto){
+  const bruto=String(texto||"").trim().replace(/^\`\`\`json\s*/i,"").replace(/\`\`\`$/,"").trim();
+  try{return JSON.parse(bruto);}catch{return null;}
+}
+
+app.post("/analisar-imagem-experimental",async(req,res)=>{try{
+  const{imagemBase64}=req.body;
+  if(!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Nenhuma imagem recebida."});
+  const imagem={inlineData:{mimeType:"image/jpeg",data:imagemBase64}};
+
+  const inventarioResp=await ai.models.generateContent({
+    model:"gemini-3.5-flash-lite",
+    contents:[{role:"user",parts:[{text:PROMPT_INVENTARIO_VISUAL},imagem]}]
+  });
+  const inventario=extrairJsonIA(inventarioResp.text);
+  if(!inventario)return res.status(502).json({status:"erro",mensagem:"A etapa de inventário visual não retornou JSON válido."});
+
+  const contextoInventario="INVENTÁRIO VISUAL DA PRIMEIRA ETAPA (não é conclusão de risco):\n"+JSON.stringify(inventario);
+  const interpretacaoResp=await ai.models.generateContent({
+    model:"gemini-3.5-flash-lite",
+    contents:[{role:"user",parts:[
+      {text:PROMPT_INSPECAO_VISUAL+"\n\n"+contextoInventario+"\n\nUse o inventário como apoio de varredura, mas confira tudo novamente na própria imagem. Não crie achado apenas porque um item consta no inventário."},
+      imagem
+    ]}]
+  });
+  const analise=extrairJsonIA(interpretacaoResp.text);
+  if(!analise)return res.status(502).json({status:"erro",mensagem:"A etapa de interpretação SST não retornou JSON válido.",inventario});
+
+  return res.json({
+    status:"ok",
+    modo:"experimental_duas_etapas",
+    aviso:"A primeira etapa inventaria evidências visuais; a segunda sugere interpretação SST. Validação humana permanece obrigatória.",
+    inventario_visual:inventario,
+    analise
+  });
+}catch(e){console.error(e);return res.status(500).json({status:"erro",mensagem:"Falha na análise visual experimental."});}});
+
 app.post("/analisar-imagem",async(req,res)=>{try{const{imagemBase64}=req.body;if(!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Nenhuma imagem recebida."});const r=await ai.models.generateContent({model:"gemini-3.5-flash-lite",contents:[{role:"user",parts:[{text:PROMPT_INSPECAO_VISUAL},{inlineData:{mimeType:"image/jpeg",data:imagemBase64}}]}]});return res.json({status:"ok",analise:r.text});}catch(e){console.error(e);return res.status(500).json({status:"erro",mensagem:"Falha ao processar a imagem."});}});
 
 function valorPosicao(a,eixo){return Number(a?.[eixo]??a?.posicao?.[eixo]??50);}
