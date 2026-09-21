@@ -511,19 +511,27 @@ document.addEventListener("DOMContentLoaded", () => {
     // NUMERAÇÃO
     // -----------------------------------------------------
 
-    const numero =
-      achado.id !== undefined &&
-      achado.id !== null
-        ? achado.id
-        : indice + 1;
-
+    // A numeração visual pertence à interface, não à IA.
+    // Assim, IDs duplicados ou ausentes no retorno não sobrepõem a identidade
+    // dos marcadores: o primeiro achado é 1, o segundo é 2 e assim por diante.
+    const numero = indice + 1;
 
     marcador.textContent =
       numero;
 
-
     marcador.dataset.numero =
       numero;
+
+    marcador.dataset.indiceAchado =
+      indice;
+
+    if (
+      achado.id !== undefined &&
+      achado.id !== null
+    ) {
+      marcador.dataset.idOriginal =
+        String(achado.id);
+    }
 
 
     // -----------------------------------------------------
