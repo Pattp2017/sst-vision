@@ -21,7 +21,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const previewContainer = document.getElementById("previewContainer");
   const fotoPreview = document.getElementById("fotoPreview");
 
-  const grupoEquipamento = document.getElementById("grupoEquipamento");
   const observacao = document.getElementById("observacao");
   const statusMicrofone = document.getElementById("statusMicrofone");
 
@@ -1197,52 +1196,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
 
   }
-
-
-  // -------------------------------------------------------
-  // TIPO DE INSPEÇÃO
-  // -------------------------------------------------------
-
-  tiposInspecao.forEach(
-    (radio) => {
-
-      radio.addEventListener(
-        "change",
-        () => {
-
-          const tipoSelecionado =
-            document.querySelector(
-              'input[name="tipoInspecao"]:checked'
-            )?.value;
-
-
-          if (
-            tipoSelecionado ===
-            "ambiente"
-          ) {
-
-            grupoEquipamento.hidden =
-              true;
-
-
-            document
-              .getElementById(
-                "equipamento"
-              )
-              .value = "";
-
-          } else {
-
-            grupoEquipamento.hidden =
-              false;
-
-          }
-
-        }
-      );
-
-    }
-  );
 
 
   // -------------------------------------------------------
