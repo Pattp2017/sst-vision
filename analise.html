@@ -23,10 +23,9 @@
         <label class="radio-card"><input type="radio" name="tipoInspecao" value="maquina" checked><span><strong>Máquina / Equipamento</strong><small>Análise de condições visíveis da máquina</small></span></label>
         <label class="radio-card"><input type="radio" name="tipoInspecao" value="ambiente"><span><strong>Ambiente de trabalho</strong><small>Análise visual do local de trabalho</small></span></label>
       </div></div>
-      <div class="form-group" id="grupoEquipamento"><label for="equipamento">Equipamento <span class="opcional">(opcional)</span></label><input type="text" id="equipamento" placeholder="Ex.: Trator, esmeril, betoneira"><small class="ajuda">Se não souber, deixe em branco. A identificação poderá ser feita durante a análise.</small></div>
-      <div class="form-group"><label for="observacao">Observação <span class="opcional">(opcional)</span></label><div class="observacao-com-voz"><textarea id="observacao" rows="4" placeholder="Digite uma observação ou use o microfone"></textarea><button type="button" id="btnMicrofone" class="btn-microfone" aria-label="Gravar observação por voz" title="Gravar observação por voz">🎤</button></div><small id="statusMicrofone" class="ajuda" hidden></small></div>
-    </section>
+      </section>
     <section class="card camera-card">
+      <div class="form-group"><label for="observacao">Observação <span class="opcional">(opcional)</span></label><div class="observacao-com-voz"><textarea id="observacao" rows="4" placeholder="Digite uma observação ou use o microfone"></textarea><button type="button" id="btnMicrofone" class="btn-microfone" aria-label="Gravar observação por voz" title="Gravar observação por voz">🎤</button></div><small id="statusMicrofone" class="ajuda" hidden></small></div>
       <div class="camera-title"><h2>Evidência de campo</h2><p>Registre a condição que será analisada. Nesta fase, a evidência utilizada é fotográfica.</p></div>
       <div class="camera-area" id="cameraArea"><div class="camera-placeholder"><div class="camera-icon">📷</div><strong>Nenhuma evidência registrada</strong><span>Utilize a câmera do dispositivo para iniciar a inspeção.</span></div></div>
       <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
