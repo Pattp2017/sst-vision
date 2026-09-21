@@ -11,12 +11,16 @@
   }
 
   function normalizarAchado(achado = {}, indice = 0) {
-    const id = Number(achado.id ?? achado.numero ?? indice + 1);
+    // O número sequencial é controlado pelo SST Vision.
+    // Preservamos o identificador recebido da IA apenas para rastreabilidade.
+    const idOriginal = achado.id ?? achado.numero ?? null;
+    const id = indice + 1;
     const x = numeroSeguro(achado.x ?? achado.posicao?.x ?? achado.coordenadas?.x, 50);
     const y = numeroSeguro(achado.y ?? achado.posicao?.y ?? achado.coordenadas?.y, 50);
 
     return {
       ...achado,
+      id_original: idOriginal,
       id,
       numero: id,
       origem: achado.origem || "ia",
