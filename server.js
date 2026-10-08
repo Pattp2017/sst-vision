@@ -88,7 +88,8 @@ app.post("/melhorar-texto-rv",async(req,res)=>{
   ].join("\\n");
   const resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-2.5-flash-lite",contents:instrucao,config:{responseMimeType:"application/json"}});
   const bruto=String(resposta.text||"").trim();
-  const parsed=JSON.parse(bruto.replace(/^```(?:json)?\\s*/i,"").replace(/\\s*```$/,""));\n  if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw Error("Resposta JSON inválida");
+  const parsed=JSON.parse(bruto.replace(/^```(?:json)?\\s*/i,"").replace(/\\s*```$/,""));
+  if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw Error("Resposta JSON inválida");
   const revisados={};
   for(const [chave,original] of Object.entries(textos))revisados[chave]=typeof parsed[chave]==="string"&&parsed[chave].trim()?parsed[chave].slice(0,4000):original;
   res.json({status:"ok",textos:revisados});
