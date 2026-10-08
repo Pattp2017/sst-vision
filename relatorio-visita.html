@@ -27,6 +27,17 @@
 }
 
 .rv-timbrado{width:100%;margin-bottom:10px}.rv-timbrado-tabela{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px;text-align:center;color:#222}.rv-timbrado-tabela th,.rv-timbrado-tabela td{border:1px solid #444;padding:5px 3px;overflow-wrap:anywhere;font-weight:normal}.rv-timbrado-tabela .rv-timbrado-titulo{font-size:15px;font-weight:500;padding:14px 4px}.rv-timbrado-tabela th{background:transparent;font-weight:500}@media print{.rv-timbrado{break-inside:avoid}.rv-timbrado-tabela{font-size:7.5pt}.rv-timbrado-tabela .rv-timbrado-titulo{font-size:13pt}}
+
+/* Timbrado de impressão fora do fluxo paginado do relatório. */
+.rv-print-rodape{display:none}
+@media print{
+ @page{size:A4;margin:22mm 14mm 29mm}
+ .report .rv-rodape{display:none!important}
+ body>.rv-print-rodape{display:flex!important;position:fixed!important;left:0;right:0;bottom:-25mm;height:21mm;min-height:0;margin:0;padding:0;border:0;background:white;align-items:center;justify-content:space-between;z-index:9999;break-inside:avoid}
+ body>.rv-print-rodape img{display:block;max-height:20mm;max-width:100%;object-fit:contain}
+ .rv-timbrado{break-inside:avoid}
+ .report{isolation:auto}
+}
 </style></head><body><header><div style="max-width:1000px;margin:auto"><a href="./visitas.html">‹ Voltar às visitas</a><h1>Relatório de Visita Técnica</h1><div>SST Vision · Segurança e Saúde no Trabalho</div></div></header>
 <main><section class="panel editor"><h2>Identificação</h2><p class="hint" id="aviso">Dados carregados da visita, quando disponível.</p><div class="grid"><div><label>Empresa / Fazenda</label><input id="empresa"></div><div><label>Local / Unidade</label><input id="local"></div><div><label>Data da visita</label><input id="data" type="date"></div><div><label>Profissional responsável pela visita</label><input id="consultor"></div><div><label>Profissional responsável pelo acompanhamento</label><input id="responsavel_acompanhamento"></div><div><label>Acompanhante da empresa (opcional)</label><input id="acompanhante"></div><div><label>Tipo de visita</label><input id="tipo"></div></div><label>Objetivo da visita (opcional)</label><textarea id="objetivo"></textarea><h2>Atividades realizadas</h2><label>Descreva o que efetivamente foi executado</label><textarea id="atividades"></textarea><h2>2. Situações identificadas</h2><div id="itens"></div><div class="actions"><button class="btn secondary" id="adicionar">＋ Adicionar registro</button></div><h2>3. Considerações finais</h2><label>Pendências e encaminhamentos (opcional)</label><textarea id="conclusao"></textarea><label>Próxima visita / acompanhamento</label><input id="proxima" type="date"><div class="actions"><button class="btn" id="salvar">Salvar rascunho</button><button class="btn secondary" id="visualizar" type="button">Melhorar com IA e visualizar</button><button class="btn secondary" id="previaSimples" type="button">Atualizar sem IA</button><button class="btn" id="pdf">Gerar PDF / Imprimir</button></div><div id="revisaoIA" class="panel" hidden style="border:1px solid #94a3b8"><h2>Revisão sugerida pela IA</h2><p class="hint">Confira os textos antes de aceitar. Nenhuma sugestão será aplicada automaticamente.</p><div id="comparacaoIA"></div><div class="actions"><button class="btn" type="button" id="aceitarIA">Aceitar sugestões</button><button class="btn secondary" type="button" id="descartarIA">Manter original</button></div></div><p class="hint">Rascunho salvo somente neste navegador. Para PDF, escolha “Salvar como PDF” na janela de impressão. Revise os registros antes de emitir.</p></section><section class="panel"><div id="previa" class="report"></div></section></main>
 <script src="https://pattp2017.github.io/treinamento/supabase-config.js"></script>
@@ -108,6 +119,20 @@ async function melhorarComIA(){
  }catch(e){alert('Não foi possível utilizar a IA: '+e.message+' Você pode atualizar a prévia sem IA.')}
  finally{botao.disabled=false;botao.textContent='Melhorar com IA e visualizar'}
 }
+
+// O rodapé precisa ser filho direto de body para repetir corretamente em todas as folhas.
+function prepararRodapeImpressao(){
+ document.querySelectorAll('body > .rv-print-rodape').forEach(el=>el.remove());
+ const original=document.querySelector('#previa .rv-rodape');
+ if(!original)return;
+ const copia=original.cloneNode(true);
+ copia.classList.add('rv-print-rodape');
+ copia.setAttribute('aria-hidden','true');
+ document.body.appendChild(copia);
+}
+function limparRodapeImpressao(){document.querySelectorAll('body > .rv-print-rodape').forEach(el=>el.remove())}
+window.addEventListener('beforeprint',prepararRodapeImpressao);
+window.addEventListener('afterprint',limparRodapeImpressao);
 function init(){const vs=JSON.parse(localStorage.getItem('sstVision.visitas.v1')||'[]'),visita=vs.find(v=>v.id===id);if(visita){for(const k of ['empresa','local','data','acompanhante','tipo','objetivo'])$(k).value=visita[k]||'';$('atividades').value=visita.observacoes||''}let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'null')}catch{}if(saved){for(const k of campos)if(saved.campos?.[k]!=null)$(k).value=saved.campos[k];itens=Array.isArray(saved.itens)?saved.itens.map(x=>({...x,fotos:Array.isArray(x.fotos)?x.fotos:(x.foto?[{id:crypto.randomUUID(),src:x.foto,legenda:x.legenda||''}]:[])})):[]}if(!itens.length)addItem();else renderItens();preview();carregarIdentidade()}
 $('adicionar').onclick=()=>{sync();addItem()};$('visualizar').onclick=melhorarComIA;$('previaSimples').onclick=preview;$('aceitarIA').onclick=aplicarSugestoes;$('descartarIA').onclick=()=>{esconderRevisao();preview()};$('salvar').onclick=()=>{try{localStorage.setItem(KEY,JSON.stringify(snapshot()));alert('Rascunho salvo neste dispositivo.')}catch(e){alert('Falha ao salvar: '+e.message)}};$('pdf').onclick=()=>{preview();window.print()};init();
 </script></body></html>
