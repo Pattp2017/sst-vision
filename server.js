@@ -73,7 +73,19 @@ app.post("/melhorar-texto-rv",async(req,res)=>{
    if(valor.trim())textos[chave]=valor.slice(0,3500);
   }
   if(!Object.keys(textos).length)return res.status(400).json({status:"erro",mensagem:"Não há textos para revisar."});
-  const instrucao="Você é revisor técnico de relatórios de visita de Segurança e Saúde no Trabalho no Brasil. Melhore clareza, concisão, gramática e formalidade. Preserve rigorosamente os fatos e decisões de cada campo. Não invente achados, riscos, equipamentos, normas, números, responsabilidades, prazos, ações ou conclusões. Não altere o sentido de recomendações e decisões já tomadas. Responda SOMENTE um objeto JSON válido com as MESMAS chaves de entrada e valores string. Não inclua markdown. Textos: "+JSON.stringify(textos);
+  const instrucao=[
+   "Atue como engenheiro de Segurança do Trabalho experiente, revisando um relatório de visita técnica de SST no Brasil.",
+   "Objetivo: transformar anotações breves em redação técnica clara, consistente, objetiva e suficientemente detalhada para orientar ações corretivas e acompanhamento.",
+   "Em constatações, descreva tecnicamente a condição informada, o mecanismo de exposição e as possíveis consequências, quando inferíveis com segurança. Diferencie expressamente observação registrada de risco potencial.",
+   "Em recomendações, detalhe medidas de controle compatíveis com a condição descrita, priorizando eliminação, substituição, medidas de engenharia, administrativas e EPI conforme pertinência. Não apresente medidas não deliberadas como providências já acordadas.",
+   "Em providências, preserve integralmente o que foi efetivamente decidido. Em atividades e objetivo, use terminologia profissional sem ampliar o escopo real da visita. Em considerações finais, sintetize resultados e necessidades de acompanhamento sem declarar regularidade ou conformidade não comprovada.",
+   "Não invente inspeções, medições, causas definitivas, irregularidades, normas específicas, obrigações legais, dados, responsáveis, prazos, medidas executadas, decisões, treinamentos ou EPIs que não constem do texto original.",
+   "Não cite números de NRs ou normas ABNT sem fundamento explícito fornecido no texto. Quando faltarem dados relevantes, formule recomendações condicionais sem afirmar que a situação foi verificada.",
+   "Evite frases genéricas, repetições, alarmismo e excesso de formalismo. Cada campo deve ser um parágrafo técnico completo, preferencialmente entre 50 e 110 palavras quando houver conteúdo suficiente; anotações simples podem gerar textos menores.",
+   "Mantenha o mesmo significado de cada chave e não mova informações entre registros. Escreva em português brasileiro.",
+   "Retorne exclusivamente um objeto JSON válido com exatamente as mesmas chaves de entrada e valores string, sem markdown.",
+   "Textos para revisão: "+JSON.stringify(textos)
+  ].join("\\n");
   const resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-2.5-flash-lite",contents:instrucao,config:{responseMimeType:"application/json"}});
   const bruto=String(resposta.text||"").trim();
   const parsed=JSON.parse(bruto.replace(/^```(?:json)?\\s*/i,"").replace(/\\s*```$/,""));\n  if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw Error("Resposta JSON inválida");
