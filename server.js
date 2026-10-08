@@ -85,15 +85,21 @@ app.post("/melhorar-texto-rv",async(req,res)=>{
    "Mantenha o mesmo significado de cada chave e não mova informações entre registros. Escreva em português brasileiro.",
    "Retorne exclusivamente um objeto JSON válido com exatamente as mesmas chaves de entrada e valores string, sem markdown.",
    "Textos para revisão: "+JSON.stringify(textos)
-  ].join("\\n");
+  ].join("\n");
   const resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-2.5-flash-lite",contents:instrucao,config:{responseMimeType:"application/json"}});
   const bruto=String(resposta.text||"").trim();
-  const parsed=JSON.parse(bruto.replace(/^```(?:json)?\\s*/i,"").replace(/\\s*```$/,""));
+  const parsed=JSON.parse(bruto.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,""));
   if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw Error("Resposta JSON inválida");
   const revisados={};
   for(const [chave,original] of Object.entries(textos))revisados[chave]=typeof parsed[chave]==="string"&&parsed[chave].trim()?parsed[chave].slice(0,4000):original;
   res.json({status:"ok",textos:revisados});
- }catch(e){console.error("Falha revisão RV:",e);res.status(502).json({status:"erro",mensagem:"Falha na revisão com IA. Verifique o serviço no Render e a configuração do Gemini.",codigo:"RV_IA_FALHOU"});}
+ }catch(e){
+  const detalhe=String(e?.message||e||"Erro desconhecido");
+  const status=Number(e?.status||e?.code||0);
+  const categoria=status===429?"LIMITE_GEMINI":status===401||status===403?"AUTENTICACAO_GEMINI":status===404?"MODELO_GEMINI":detalhe.includes("JSON")?"RESPOSTA_INVALIDA":"FALHA_GEMINI";
+  console.error("Falha revisão RV:",{categoria,status,detalhe});
+  res.status(502).json({status:"erro",mensagem:"Falha na revisão com IA ("+categoria+"). Consulte os logs do Render.",codigo:categoria});
+ }
 });
 
 app.listen(PORT,()=>console.log(`SST Vision rodando na porta ${PORT}`));
