@@ -67,7 +67,6 @@ app.post("/melhorar-texto-rv",async(req,res)=>{
  try{
   const entrada=req.body?.textos;
   if(!entrada||typeof entrada!=="object"||Array.isArray(entrada))return res.status(400).json({status:"erro",mensagem:"Textos inválidos."});
-  const camposPermitidos=new Set(["objetivo","atividades","conclusao","constatacao","recomendacao","providencia"]);
   const textos={};
   for(const [chave,valor] of Object.entries(entrada)){
    if(!/^(objetivo|atividades|conclusao|item_[0-9]+_(constatacao|recomendacao|providencia))$/.test(chave)||typeof valor!=="string")continue;
@@ -75,13 +74,13 @@ app.post("/melhorar-texto-rv",async(req,res)=>{
   }
   if(!Object.keys(textos).length)return res.status(400).json({status:"erro",mensagem:"Não há textos para revisar."});
   const instrucao="Você é revisor técnico de relatórios de visita de Segurança e Saúde no Trabalho no Brasil. Melhore clareza, concisão, gramática e formalidade. Preserve rigorosamente os fatos e decisões de cada campo. Não invente achados, riscos, equipamentos, normas, números, responsabilidades, prazos, ações ou conclusões. Não altere o sentido de recomendações e decisões já tomadas. Responda SOMENTE um objeto JSON válido com as MESMAS chaves de entrada e valores string. Não inclua markdown. Textos: "+JSON.stringify(textos);
-  const resposta=await ai.models.generateContent({model:"gemini-3.5-flash-lite",contents:instrucao,config:{responseMimeType:"application/json"}});
+  const resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-2.5-flash-lite",contents:instrucao,config:{responseMimeType:"application/json"}});
   const bruto=String(resposta.text||"").trim();
-  const parsed=JSON.parse(bruto);
+  const parsed=JSON.parse(bruto.replace(/^```(?:json)?\\s*/i,"").replace(/\\s*```$/,""));\n  if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw Error("Resposta JSON inválida");
   const revisados={};
   for(const [chave,original] of Object.entries(textos))revisados[chave]=typeof parsed[chave]==="string"&&parsed[chave].trim()?parsed[chave].slice(0,4000):original;
   res.json({status:"ok",textos:revisados});
- }catch(e){console.error("Falha revisão RV:",e);res.status(500).json({status:"erro",mensagem:"Não foi possível revisar o texto com IA."});}
+ }catch(e){console.error("Falha revisão RV:",e);res.status(502).json({status:"erro",mensagem:"Falha na revisão com IA. Verifique o serviço no Render e a configuração do Gemini.",codigo:"RV_IA_FALHOU"});}
 });
 
 app.listen(PORT,()=>console.log(`SST Vision rodando na porta ${PORT}`));
