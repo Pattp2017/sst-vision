@@ -86,7 +86,7 @@ app.post("/melhorar-texto-rv",async(req,res)=>{
    "Retorne exclusivamente um objeto JSON válido com exatamente as mesmas chaves de entrada e valores string, sem markdown.",
    "Textos para revisão: "+JSON.stringify(textos)
   ].join("\n");
-  const resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-2.5-flash-lite",contents:instrucao,config:{responseMimeType:"application/json"}});
+  const resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-2.5-flash",contents:instrucao,config:{responseMimeType:"application/json"}});
   const bruto=String(resposta.text||"").trim();
   const parsed=JSON.parse(bruto.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,""));
   if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw Error("Resposta JSON inválida");
