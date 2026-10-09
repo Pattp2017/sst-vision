@@ -60,6 +60,8 @@ function renderItens(){
   const original=b.textContent;b.disabled=true;b.textContent='Analisando fotos...';
   try{
    const resposta=await fetch('https://sst-vision.onrender.com/analisar-fotos-rv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fotos:x.fotos.map(f=>f.src),ambiente:x.ambiente,observacao:x.constatacao})});
+   const tipo=resposta.headers.get('content-type')||'';
+   if(!tipo.includes('application/json'))throw Error('O servidor não retornou JSON (HTTP '+resposta.status+'). Verifique se o deploy do backend terminou.');
    const dados=await resposta.json();
    if(!resposta.ok||dados.status!=='ok')throw Error(dados.mensagem||'Falha na análise');
    const confirmar=confirm('Sugestão de evidência:\\n\\n'+dados.evidencia+'\\n\\nRecomendação técnica:\\n\\n'+dados.recomendacao+'\\n\\nDeseja preencher os campos deste registro com essas sugestões? Os textos existentes serão substituídos.');
