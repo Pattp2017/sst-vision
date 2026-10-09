@@ -67,24 +67,29 @@ app.post("/analisar-fotos-rv",async(req,res)=>{
  try{
   const fotos=req.body?.fotos;
   if(!Array.isArray(fotos)||!fotos.length||fotos.length>6)return res.status(400).json({status:"erro",mensagem:"Envie de 1 a 6 fotos por análise."});
+  const legendas=Array.isArray(req.body?.legendas)?req.body.legendas:[];
+  const contexto=legendas.map((legenda,i)=>"Foto "+(i+1)+": "+String(legenda||"").slice(0,400)).filter(l=>l.trim());
   const partes=[{text:[
-   "Você é um assistente de análise visual para relatórios de Segurança e Saúde no Trabalho.",
-   "Há "+fotos.length+" fotografias do MESMO registro e do MESMO assunto. Examine obrigatoriamente TODAS antes de concluir.",
-   "Para cada fotografia, identifique mentalmente o que ela mostra e quais condições visíveis acrescenta às demais. Não considere apenas a primeira imagem.",
-   "Depois integre os achados em UMA constatação/evidência e UMA recomendação técnica, sem repetir observações iguais.",
-   "Retorne JSON com exatamente duas propriedades de texto: evidencia e recomendacao.",
-   "Na evidência, descreva as condições efetivamente observáveis no conjunto das fotos. Quando as imagens mostrarem aspectos diferentes, inclua todos os aspectos relevantes e diferencie as imagens por número se isso ajudar.",
-   "Na recomendação, proponha verificações e medidas técnicas pertinentes ao conjunto dos achados, sem afirmar causas, medições ou descumprimento normativo não comprovados.",
-   "Não invente defeitos ou fatos ausentes das imagens; registre limitações quando necessário. Não assuma que houve inspeção presencial.",
-   "Setor informado: "+String(req.body?.ambiente||"").slice(0,250),
+   "Você auxilia na redação de relatório técnico de Segurança e Saúde no Trabalho.",
+   "As "+fotos.length+" fotografias pertencem a UMA ocorrência. Faça uma análise integrada do conjunto.",
+   "As legendas registram o ponto de atenção observado pelo profissional e DEFINEM O FOCO da análise. Não faça um inventário genérico de todos os objetos das imagens.",
+   "Examine todas as fotografias em relação ao tema descrito nas legendas; combine perspectivas complementares sem repetir conclusões.",
+   "Não trate a legenda como prova absoluta: diferencie o que é visível do que foi relatado pelo profissional e registre incertezas quando a imagem não confirmar um detalhe.",
+   "Se as legendas divergirem, procure o tema comum e aponte divergências relevantes sem inventar fatos.",
+   "Produza um único objeto JSON com as chaves evidencia e recomendacao, ambas strings.",
+   "Evidencia: descreva objetivamente a ocorrência conforme as legendas e o conjunto das fotos, sem extrapolar o que é observável.",
+   "Recomendacao: indique medidas e verificações técnicas relacionadas especificamente à ocorrência, sem afirmar medições, causas, normas ou conformidade não comprovadas.",
+   "Não invente defeitos, responsáveis ou prazos. Não alegue inspeção presencial feita pela IA.",
+   "Setor: "+String(req.body?.ambiente||"").slice(0,250),
    "Observações do profissional: "+String(req.body?.observacao||"").slice(0,1000),
-   "Responda em português brasileiro técnico e objetivo, somente JSON."
+   "Legendas por foto:\n"+(contexto.join("\n")||"Não informadas"),
+   "Responda em português brasileiro, linguagem técnica objetiva, apenas JSON."
   ].join("\n")}];
   for(let indice=0;indice<fotos.length;indice++){
    const foto=fotos[indice];
    if(typeof foto!=="string"||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto)||foto.length>2500000)return res.status(400).json({status:"erro",mensagem:"Formato ou tamanho de foto inválido."});
    const [prefixo,dados]=foto.split(",");
-   partes.push({text:"Fotografia "+(indice+1)+" de "+fotos.length+" deste mesmo registro:"});
+   partes.push({text:"Foto "+(indice+1)+" de "+fotos.length+". Legenda: "+String(legendas[indice]||"Não informada").slice(0,400)});
    partes.push({inlineData:{mimeType:prefixo.slice(5,-7),data:dados}});
   }
   let resposta;
