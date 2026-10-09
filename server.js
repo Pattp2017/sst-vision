@@ -63,6 +63,40 @@ app.post("/salvar-analise",async(req,res)=>{let analiseId=null,storagePath=null;
 app.post("/adicionar-foto-analise",async(req,res)=>{let storagePath=null;try{const{analiseId,achados,imagemBase64}=req.body;if(!analiseId||!imagemBase64)return res.status(400).json({status:"erro",mensagem:"Análise e foto são obrigatórias."});const s=supabaseAdmin();const{data:existente,error:ee}=await s.from("vision_analises").select("id").eq("id",analiseId).single();if(ee||!existente)throw new Error("Análise original não encontrada.");const{data:fotos,error:ec}=await s.from("vision_fotos").select("ordem").eq("analise_id",analiseId).order("ordem",{ascending:false}).limit(1);if(ec)throw new Error(ec.message);const ordem=(fotos?.[0]?.ordem||0)+1;storagePath=`${analiseId}/foto-${ordem}.jpg`;const buffer=Buffer.from(imagemBase64,"base64");const{error:eu}=await s.storage.from("vision-fotos").upload(storagePath,buffer,{contentType:"image/jpeg",upsert:false});if(eu)throw new Error(eu.message);const{error:ef}=await s.from("vision_fotos").insert({analise_id:analiseId,storage_path:storagePath,ordem});if(ef)throw new Error(ef.message);const persistencia=await inserirAchados(s,analiseId,achados);return res.json({status:"ok",mensagem:"Foto adicionada à análise.",analiseId,ordemFoto:ordem,persistencia});}catch(e){console.error(e);try{if(storagePath)await supabaseAdmin().storage.from("vision-fotos").remove([storagePath]);}catch{}return res.status(500).json({status:"erro",mensagem:e?.message||"Não foi possível adicionar a foto."});}});
 
 // Revisão textual do RV: a IA não deve adicionar fatos, riscos, normas ou prazos.
+app.post("/analisar-fotos-rv",async(req,res)=>{
+ try{
+  const fotos=req.body?.fotos;
+  if(!Array.isArray(fotos)||!fotos.length||fotos.length>6)return res.status(400).json({status:"erro",mensagem:"Envie de 1 a 6 fotos por análise."});
+  const partes=[{text:[
+   "Atue como profissional experiente em Segurança e Saúde no Trabalho. Analise somente as fotografias fornecidas, em conjunto com o contexto informado.",
+   "Produza um objeto JSON com exatamente duas chaves string: evidencia e recomendacao.",
+   "Em evidencia, descreva objetivamente apenas as condições visualmente verificáveis; não afirme medições, conformidade legal, falta de EPI fora do enquadramento, causas ou riscos não demonstrados. Explicite incertezas e necessidade de inspeção presencial.",
+   "Em recomendacao, apresente orientações técnicas proporcionais aos achados visíveis, indicando verificações necessárias quando cabível. Não invente normas, decisões, responsáveis ou prazos.",
+   "Não afirme que houve inspeção técnica presencial. Não invente defeitos apenas para preencher o relatório. Caso não haja evidência suficiente, declare a limitação.",
+   "Contexto do setor (fornecido pelo usuário): "+String(req.body?.ambiente||"").slice(0,250),
+   "Observações fornecidas pelo usuário: "+String(req.body?.observacao||"").slice(0,1000),
+   "Responda em português brasileiro, com texto técnico objetivo, exclusivamente JSON."
+  ].join("\\n")}];
+  for(const foto of fotos){
+   if(typeof foto!=="string"||!/^data:image\\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto)||foto.length>2500000)return res.status(400).json({status:"erro",mensagem:"Formato ou tamanho de foto inválido."});
+   const [prefixo,dados]=foto.split(",");
+   partes.push({inlineData:{mimeType:prefixo.slice(5,-7),data:dados}});
+  }
+  let resposta;
+  for(let tentativa=0;tentativa<3;tentativa++){
+   try{resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-3.8-flash",contents:[{role:"user",parts:partes}],config:{responseMimeType:"application/json"}});break}
+   catch(e){const status=Number(e?.status||e?.code||0);if(![429,503].includes(status)||tentativa===2)throw e;await new Promise(resolve=>setTimeout(resolve,1000*(tentativa+1)))}
+  }
+  const resultado=JSON.parse(String(resposta.text||"").replace(/^```(?:json)?\\s*/i,"").replace(/\\s*```$/,"").trim());
+  if(typeof resultado?.evidencia!=="string"||typeof resultado?.recomendacao!=="string")throw Error("Resposta incompleta da IA");
+  res.json({status:"ok",evidencia:resultado.evidencia.slice(0,4000),recomendacao:resultado.recomendacao.slice(0,4000)});
+ }catch(e){
+  const status=Number(e?.status||e?.code||0);
+  console.error("Falha análise fotográfica RV:",{status,detalhe:String(e?.message||e)});
+  res.status(502).json({status:"erro",mensagem:status===503?"Gemini temporariamente sobrecarregado. Tente novamente.":"Não foi possível analisar as fotos. Consulte os logs do Render."});
+ }
+});
+
 app.post("/melhorar-texto-rv",async(req,res)=>{
  try{
   const entrada=req.body?.textos;
