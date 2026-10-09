@@ -59,7 +59,7 @@ function renderItens(){
   if(x.fotos.length>6){alert('Analise até 6 fotos por registro.');return}
   const original=b.textContent;b.disabled=true;b.textContent='Analisando fotos...';
   try{
-   const resposta=await fetch('https://sst-vision.onrender.com/analisar-fotos-rv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fotos:x.fotos.map(f=>f.src),ambiente:x.ambiente,observacao:x.constatacao})});
+   const resposta=await fetch('https://sst-vision.onrender.com/analisar-fotos-rv',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fotos:x.fotos.map(f=>f.src),legendas:x.fotos.map(f=>f.legenda||""),ambiente:x.ambiente,observacao:x.constatacao})});
    const tipo=resposta.headers.get('content-type')||'';
    if(!tipo.includes('application/json'))throw Error('O servidor não retornou JSON (HTTP '+resposta.status+'). Verifique se o deploy do backend terminou.');
    const dados=await resposta.json();
