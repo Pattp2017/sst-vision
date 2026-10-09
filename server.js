@@ -76,9 +76,9 @@ app.post("/analisar-fotos-rv",async(req,res)=>{
    "Contexto do setor (fornecido pelo usuário): "+String(req.body?.ambiente||"").slice(0,250),
    "Observações fornecidas pelo usuário: "+String(req.body?.observacao||"").slice(0,1000),
    "Responda em português brasileiro, com texto técnico objetivo, exclusivamente JSON."
-  ].join("\\n")}];
+  ].join("\n")}];
   for(const foto of fotos){
-   if(typeof foto!=="string"||!/^data:image\\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto)||foto.length>2500000)return res.status(400).json({status:"erro",mensagem:"Formato ou tamanho de foto inválido."});
+   if(typeof foto!=="string"||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto)||foto.length>2500000)return res.status(400).json({status:"erro",mensagem:"Formato ou tamanho de foto inválido."});
    const [prefixo,dados]=foto.split(",");
    partes.push({inlineData:{mimeType:prefixo.slice(5,-7),data:dados}});
   }
@@ -87,7 +87,7 @@ app.post("/analisar-fotos-rv",async(req,res)=>{
    try{resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-3.8-flash",contents:[{role:"user",parts:partes}],config:{responseMimeType:"application/json"}});break}
    catch(e){const status=Number(e?.status||e?.code||0);if(![429,503].includes(status)||tentativa===2)throw e;await new Promise(resolve=>setTimeout(resolve,1000*(tentativa+1)))}
   }
-  const resultado=JSON.parse(String(resposta.text||"").replace(/^```(?:json)?\\s*/i,"").replace(/\\s*```$/,"").trim());
+  const resultado=JSON.parse(String(resposta.text||"").replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim());
   if(typeof resultado?.evidencia!=="string"||typeof resultado?.recomendacao!=="string")throw Error("Resposta incompleta da IA");
   res.json({status:"ok",evidencia:resultado.evidencia.slice(0,4000),recomendacao:resultado.recomendacao.slice(0,4000)});
  }catch(e){
