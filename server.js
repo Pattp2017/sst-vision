@@ -68,18 +68,23 @@ app.post("/analisar-fotos-rv",async(req,res)=>{
   const fotos=req.body?.fotos;
   if(!Array.isArray(fotos)||!fotos.length||fotos.length>6)return res.status(400).json({status:"erro",mensagem:"Envie de 1 a 6 fotos por análise."});
   const partes=[{text:[
-   "Atue como profissional experiente em Segurança e Saúde no Trabalho. Analise somente as fotografias fornecidas, em conjunto com o contexto informado.",
-   "Produza um objeto JSON com exatamente duas chaves string: evidencia e recomendacao.",
-   "Em evidencia, descreva objetivamente apenas as condições visualmente verificáveis; não afirme medições, conformidade legal, falta de EPI fora do enquadramento, causas ou riscos não demonstrados. Explicite incertezas e necessidade de inspeção presencial.",
-   "Em recomendacao, apresente orientações técnicas proporcionais aos achados visíveis, indicando verificações necessárias quando cabível. Não invente normas, decisões, responsáveis ou prazos.",
-   "Não afirme que houve inspeção técnica presencial. Não invente defeitos apenas para preencher o relatório. Caso não haja evidência suficiente, declare a limitação.",
-   "Contexto do setor (fornecido pelo usuário): "+String(req.body?.ambiente||"").slice(0,250),
-   "Observações fornecidas pelo usuário: "+String(req.body?.observacao||"").slice(0,1000),
-   "Responda em português brasileiro, com texto técnico objetivo, exclusivamente JSON."
+   "Você é um assistente de análise visual para relatórios de Segurança e Saúde no Trabalho.",
+   "Há "+fotos.length+" fotografias do MESMO registro e do MESMO assunto. Examine obrigatoriamente TODAS antes de concluir.",
+   "Para cada fotografia, identifique mentalmente o que ela mostra e quais condições visíveis acrescenta às demais. Não considere apenas a primeira imagem.",
+   "Depois integre os achados em UMA constatação/evidência e UMA recomendação técnica, sem repetir observações iguais.",
+   "Retorne JSON com exatamente duas propriedades de texto: evidencia e recomendacao.",
+   "Na evidência, descreva as condições efetivamente observáveis no conjunto das fotos. Quando as imagens mostrarem aspectos diferentes, inclua todos os aspectos relevantes e diferencie as imagens por número se isso ajudar.",
+   "Na recomendação, proponha verificações e medidas técnicas pertinentes ao conjunto dos achados, sem afirmar causas, medições ou descumprimento normativo não comprovados.",
+   "Não invente defeitos ou fatos ausentes das imagens; registre limitações quando necessário. Não assuma que houve inspeção presencial.",
+   "Setor informado: "+String(req.body?.ambiente||"").slice(0,250),
+   "Observações do profissional: "+String(req.body?.observacao||"").slice(0,1000),
+   "Responda em português brasileiro técnico e objetivo, somente JSON."
   ].join("\n")}];
-  for(const foto of fotos){
+  for(let indice=0;indice<fotos.length;indice++){
+   const foto=fotos[indice];
    if(typeof foto!=="string"||!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(foto)||foto.length>2500000)return res.status(400).json({status:"erro",mensagem:"Formato ou tamanho de foto inválido."});
    const [prefixo,dados]=foto.split(",");
+   partes.push({text:"Fotografia "+(indice+1)+" de "+fotos.length+" deste mesmo registro:"});
    partes.push({inlineData:{mimeType:prefixo.slice(5,-7),data:dados}});
   }
   let resposta;
