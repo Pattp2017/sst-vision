@@ -86,7 +86,19 @@ app.post("/melhorar-texto-rv",async(req,res)=>{
    "Retorne exclusivamente um objeto JSON válido com exatamente as mesmas chaves de entrada e valores string, sem markdown.",
    "Textos para revisão: "+JSON.stringify(textos)
   ].join("\n");
-  const resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-3.8-flash",contents:instrucao,config:{responseMimeType:"application/json"}});
+  let resposta;
+  for(let tentativa=0;tentativa<3;tentativa++){
+   try{
+    resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-3.8-flash",contents:instrucao,config:{responseMimeType:"application/json"}});
+    break;
+   }catch(erro){
+    const codigo=Number(erro?.status||erro?.code||0);
+    if(![429,503].includes(codigo)||tentativa===2)throw erro;
+    const espera=1000*Math.pow(2,tentativa);
+    console.warn("Gemini temporariamente indisponível; nova tentativa:",{codigo,tentativa:tentativa+2,esperaMs:espera});
+    await new Promise(resolve=>setTimeout(resolve,espera));
+   }
+  }
   const bruto=String(resposta.text||"").trim();
   const parsed=JSON.parse(bruto.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,""));
   if(!parsed||typeof parsed!=="object"||Array.isArray(parsed))throw Error("Resposta JSON inválida");
@@ -96,7 +108,7 @@ app.post("/melhorar-texto-rv",async(req,res)=>{
  }catch(e){
   const detalhe=String(e?.message||e||"Erro desconhecido");
   const status=Number(e?.status||e?.code||0);
-  const categoria=status===429?"LIMITE_GEMINI":status===401||status===403?"AUTENTICACAO_GEMINI":status===404?"MODELO_GEMINI":detalhe.includes("JSON")?"RESPOSTA_INVALIDA":"FALHA_GEMINI";
+  const categoria=status===429?"LIMITE_GEMINI":status===401||status===403?"AUTENTICACAO_GEMINI":status===404?"MODELO_GEMINI":status===503?"INDISPONIBILIDADE_GEMINI":detalhe.includes("JSON")?"RESPOSTA_INVALIDA":"FALHA_GEMINI";
   console.error("Falha revisão RV:",{categoria,status,detalhe});
   res.status(502).json({status:"erro",mensagem:"Falha na revisão com IA ("+categoria+"). Consulte os logs do Render.",codigo:categoria});
  }
