@@ -83,10 +83,27 @@ app.post("/analisar-fotos-rv",async(req,res)=>{
    partes.push({inlineData:{mimeType:prefixo.slice(5,-7),data:dados}});
   }
   let resposta;
-  for(let tentativa=0;tentativa<3;tentativa++){
-   try{resposta=await ai.models.generateContent({model:process.env.GEMINI_RV_MODEL||"gemini-3.8-flash",contents:[{role:"user",parts:partes}],config:{responseMimeType:"application/json"}});break}
-   catch(e){const status=Number(e?.status||e?.code||0);if(![429,503].includes(status)||tentativa===2)throw e;await new Promise(resolve=>setTimeout(resolve,1000*(tentativa+1)))}
+  const principal=process.env.GEMINI_RV_MODEL||"gemini-3.8-flash";
+  const alternativo=process.env.GEMINI_FOTO_FALLBACK_MODEL||"gemini-3.5-flash-lite";
+  const modelos=[...new Set([principal,alternativo])];
+  let ultimoErro;
+  for(const modelo of modelos){
+   for(let tentativa=0;tentativa<2;tentativa++){
+    try{
+     resposta=await ai.models.generateContent({model:modelo,contents:[{role:"user",parts:partes}],config:{responseMimeType:"application/json"}});
+     console.log("Análise fotográfica RV concluída:",{modelo});
+     break;
+    }catch(e){
+     ultimoErro=e;
+     const status=Number(e?.status||e?.code||0);
+     console.warn("Falha modelo fotográfico RV:",{modelo,status,tentativa:tentativa+1});
+     if(![429,503].includes(status))throw e;
+     if(tentativa===0)await new Promise(resolve=>setTimeout(resolve,1000));
+    }
+   }
+   if(resposta)break;
   }
+  if(!resposta)throw ultimoErro||Error("Nenhum modelo disponível");
   const resultado=JSON.parse(String(resposta.text||"").replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"").trim());
   if(typeof resultado?.evidencia!=="string"||typeof resultado?.recomendacao!=="string")throw Error("Resposta incompleta da IA");
   res.json({status:"ok",evidencia:resultado.evidencia.slice(0,4000),recomendacao:resultado.recomendacao.slice(0,4000)});
