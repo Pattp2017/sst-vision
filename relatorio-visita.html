@@ -248,11 +248,20 @@ async function carregarIdentificacaoChecklist(){
   const itensResposta=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/rest/v1/checklist_itens?vistoria_id=eq.'+encodeURIComponent(vistoriaId)+'&select=setor,item,status,observacao,foto_path,arquivar_foto,responsavel_nc,data_nc',{headers:{apikey:key,Authorization:'Bearer '+key}});
   if(!itensResposta.ok)throw Error('Não foi possível carregar os itens: HTTP '+itensResposta.status);
   dadosChecklist=await itensResposta.json();
-  const gruposDocumentais=/gest[aã]o de sst|sa[uú]de ocupacional|treinamentos e capacita[cç][oõ]es|equipamentos de prote[cç][aã]o individual|registros e obriga[cç][oõ]es sst|seguran[cç]a rural\s*[-–]\s*nr\s*31/i;
-  const itensDocumentais=/\b(documenta[cç][aã]o|documentos?|registros?|certificados?|comprova[cç][aã]o|invent[aá]rio de riscos|plano de a[cç][aã]o|PCMSO|PGRTR?|ASOs?|LTCAT|FDS)\b/i;
-  const gruposDoc=dadosChecklist.filter(x=>gruposDocumentais.test(x.setor||'')).length;
-  const itensDoc=dadosChecklist.filter(x=>itensDocumentais.test(x.item||'')).length;
-  documental=modeloDocumental || (!modeloCampo && dadosChecklist.length>0 && (gruposDoc>=2 || itensDoc/dadosChecklist.length>=0.55));
+  // A classificacao deve refletir a natureza dos locais do checklist.
+  // "Máquinas e Equipamentos" é um grupo documental possível, não evidência de campo.
+  const normalizar=t=>String(t||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/^\d+\s*[-–.]\s*/,'');
+  const grupos=[...new Set(dadosChecklist.map(x=>normalizar(x.local_nome_snapshot||x.setor)).filter(Boolean))];
+  const grupoDocumental=/^(gestao de sst|saude ocupacional|treinamentos e capacitacoes|equipamentos de protecao individual|seguranca contra incendio|cipa e cipatr|seguranca rural|registros e obrigacoes sst|maquinas e equipamentos)$/;
+  const grupoCampo=/^(moega|elevador de canecas|secador|empilhadeira|fornalha|beneficiamento|lavador de cafe|almoxarifado|oficina|pintura|solda|corte a plasma|area de maquinas|armazem)$/;
+  const qtdDoc=grupos.filter(g=>grupoDocumental.test(g)).length;
+  const qtdCampo=grupos.filter(g=>grupoCampo.test(g)).length;
+  if(qtdCampo>0 && qtdDoc===0)documental=false;
+  else if(qtdDoc>=2 && qtdDoc>=qtdCampo)documental=true;
+  else if(modeloDocumental && !modeloCampo)documental=true;
+  else if(modeloCampo && !modeloDocumental)documental=false;
+  else documental=qtdDoc>qtdCampo;
+  $('tipo').value=documental?'Documental':'Campo';
   fotosChecklist={};
   const fotos=dadosChecklist.filter(x=>x.foto_path);
   await Promise.all(fotos.map(async x=>{try{const resp=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1/object/sign/checklist-fotos/'+x.foto_path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});if(resp.ok){const dado=await resp.json();if(dado.signedURL)fotosChecklist[x.foto_path]='https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1'+dado.signedURL}}catch(e){console.warn('Foto indisponível',e)}}));
