@@ -29,14 +29,13 @@
 
 .rv-timbrado{width:100%;margin-bottom:10px}.rv-timbrado-tabela{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px;text-align:center;color:#222}.rv-timbrado-tabela th,.rv-timbrado-tabela td{border:1px solid #444;padding:5px 3px;overflow-wrap:anywhere;font-weight:normal}.rv-timbrado-tabela .rv-timbrado-titulo{font-size:15px;font-weight:500;padding:14px 4px}.rv-timbrado-tabela th{background:transparent;font-weight:500}@media print{.rv-timbrado{break-inside:avoid}.rv-timbrado-tabela{font-size:9.5pt}.rv-timbrado-tabela .rv-timbrado-titulo{font-size:13pt}}
 
-.rv-print-rodape{display:none!important}
+
 .report-table .rv-item-nc,.report-table .rv-situacao-nc{color:#991b1b!important;font-weight:bold}
 .report-table .rv-item-p,.report-table .rv-situacao-p{color:#854d0e!important;font-weight:bold}
 .report-table tbody tr.rv-inicio-grupo td{border-top:2px solid #64748b}
-@media print{@page{size:A4;margin:20mm 14mm}.report .rv-rodape{position:static!important;display:flex!important;bottom:auto!important;margin-top:12mm;break-inside:avoid}.report .rv-rodape img{max-height:15mm}.report-table .rv-item-nc,.report-table .rv-item-p,.report-table .rv-situacao-nc,.report-table .rv-situacao-p{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
-@media print{#previa .rv-rodape{position:relative!important;top:auto!important;bottom:auto!important;left:auto!important;right:auto!important;transform:none!important;display:flex!important;clear:both!important;break-inside:avoid!important}#previa .rv-rodape img{max-height:15mm!important}body>.rv-print-rodape{display:none!important}}@media print{
- @page{size:A4;margin:12mm 14mm 15mm}
- .report{font-size:9.5pt!important;line-height:1.24!important}
+@media print{
+ @page{size:A4;margin:14mm 14mm 23mm}
+ .report{padding:0!important;font-size:9.5pt!important;line-height:1.24!important}
  .report-table{font-size:9pt!important}
  .report-table th,.report-table td{padding:4px 5px!important}
  .report-section{margin:5px 0!important}
@@ -45,15 +44,8 @@
  .report-meta{padding:5px 0!important;gap:3px 12px!important}
  .rv-timbrado{margin-bottom:5px!important}
  .rv-timbrado-tabela th,.rv-timbrado-tabela td{padding:3px 2px!important}
- #previa .rv-rodape{margin-top:4mm!important;padding-top:2mm!important;min-height:0!important;height:auto!important;break-inside:avoid!important}
- #previa .rv-rodape img{max-height:10mm!important}
-}
-/* Rodape repetido em todas as paginas, separado da area de conteudo. */
-@media print{
- @page{size:A4;margin:14mm 14mm 27mm!important}
- #previa .rv-rodape{display:none!important}
- body>.rv-print-rodape{display:flex!important;position:fixed!important;top:auto!important;bottom:-19mm!important;left:0!important;right:0!important;height:15mm!important;min-height:0!important;margin:0!important;padding:0!important;border-top:1px solid #cbd5e1!important;background:#fff!important;align-items:center!important;justify-content:flex-start!important;z-index:100!important;break-inside:avoid!important}
- body>.rv-print-rodape img{display:block!important;max-height:14mm!important;width:auto!important;max-width:100%!important;object-fit:contain!important}
+ #previa .rv-rodape,body>.rv-print-rodape{display:none!important}
+ .report-table .rv-item-nc,.report-table .rv-item-p,.report-table .rv-situacao-nc,.report-table .rv-situacao-p{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 </style></head><body><header><div style="max-width:1000px;margin:auto"><a href="https://pattp2017.github.io/checklist/checklists.html">‹ Voltar aos checklists</a><h1>Relatório de Visita Técnica</h1><div>SST Vision · Segurança e Saúde no Trabalho</div></div></header>
 <main><section class="panel editor"><h2>Horários da visita</h2><p class="hint" id="aviso">Dados carregados da visita, quando disponível.</p><div class="grid"><div hidden><input id="empresa"></div><div hidden><input id="data" type="date"></div><div><label>Horário de início</label><input id="hora_inicio" type="time"></div><div><label>Horário de término</label><input id="hora_fim" type="time"></div><div hidden><input id="consultor"></div><div hidden><input id="responsavel_acompanhamento"></div><div hidden><input id="tipo"></div></div><div hidden><label>Objetivo da visita (opcional)</label><textarea id="objetivo">Realizar acompanhamento técnico das condições de Segurança e Saúde no Trabalho (SST), visando identificar oportunidades de melhoria e contribuir para a prevenção de acidentes e doenças ocupacionais.</textarea></div><div id="rv-antigo" hidden><h2>Atividades realizadas</h2><label>Descreva o que efetivamente foi executado</label><textarea id="atividades"></textarea><h2>2. Situações identificadas</h2><div id="itens"></div><div class="actions"><button class="btn secondary" id="adicionar">＋ Adicionar registro</button></div></div><h2>Resultados importados do checklist</h2><p class="hint" id="resumo-checklist">Carregando registros da vistoria...</p><button class="btn secondary" type="button" id="atualizarChecklist">Atualizar dados do checklist</button><h2>3. Considerações finais</h2><label>Pendências e encaminhamentos (opcional)</label><textarea id="conclusao"></textarea><label>Próxima visita / acompanhamento</label><input id="proxima" type="date"><div class="actions"><button class="btn" id="salvar">Salvar rascunho</button><button class="btn secondary" id="visualizar" type="button">Melhorar com IA e visualizar</button><button class="btn secondary" id="previaSimples" type="button">Atualizar sem IA</button><button class="btn" id="pdf">Gerar PDF / Imprimir</button></div><div id="revisaoIA" class="panel" hidden style="border:1px solid #94a3b8"><h2>Revisão sugerida pela IA</h2><p class="hint">Confira os textos antes de aceitar. Nenhuma sugestão será aplicada automaticamente.</p><div id="comparacaoIA"></div><div class="actions"><button class="btn" type="button" id="aceitarIA">Aceitar sugestões</button><button class="btn secondary" type="button" id="descartarIA">Manter original</button></div></div><p class="hint">Rascunho salvo somente neste navegador. Para PDF, escolha “Salvar como PDF” na janela de impressão. Revise os registros antes de emitir.</p></section><section class="panel"><div id="previa" class="report"></div></section></main>
@@ -154,19 +146,21 @@ async function melhorarComIA(){
 }
 
 // O rodapé precisa ser filho direto de body para repetir corretamente em todas as folhas.
+// Chrome 131+: caixas de margem @page repetem o rodape em cada folha A4.
+// A area inferior de 23 mm fica reservada fora do fluxo da tabela.
 function prepararRodapeImpressao(){
- document.querySelectorAll('body > .rv-print-rodape').forEach(el=>el.remove());
- const original=document.querySelector('#previa .rv-rodape');
- if(!original)return;
- const copia=original.cloneNode(true);
- copia.classList.add('rv-print-rodape');
- copia.setAttribute('aria-hidden','true');
- document.body.appendChild(copia);
+ let estilo=document.getElementById('rv-rodape-paginado');
+ if(!estilo){estilo=document.createElement('style');estilo.id='rv-rodape-paginado';document.head.appendChild(estilo)}
+ const imagem=githubRaw(identidade.rodape_url);
+ const fundo=imagem?'background-image:url('+JSON.stringify(imagem)+');background-repeat:no-repeat;background-position:left center;background-size:contain;':'';
+ const texto=imagem?'':('content:'+JSON.stringify(identidade.nome_exibicao||'RG Certe')+';font-size:9pt;color:#475569;');
+ estilo.textContent='@media print{@page{@bottom-left{'+(imagem?'content:"";':'')+fundo+texto+'width:175mm;height:17mm;vertical-align:middle;}}}';
+}
+function limparRodapeImpressao(){
+ // Mantem o estilo para a proxima impressao; nenhuma imagem e inserida no corpo.
 }
 window.addEventListener('beforeprint',prepararRodapeImpressao);
 window.addEventListener('afterprint',limparRodapeImpressao);
-function limparRodapeImpressao(){document.querySelectorAll('body > .rv-print-rodape').forEach(el=>el.remove())}
-
 
 async function carregarIdentificacaoChecklist(){
  const vistoriaId=qs.get('vistoria_id');
