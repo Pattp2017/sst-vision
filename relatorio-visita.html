@@ -112,7 +112,7 @@ function preview(){
  const galeria=rows.map((x,i)=>{const foto=fotosChecklist[x.foto_path];if(!foto)return '';const n=String(i+1).padStart(2,'0');return '<div class="rv-foto-nc"><strong>Não Conformidade – '+n+' | '+esc(x.setor||'')+' | '+esc(x.item||'')+'</strong><figure><img src="'+esc(foto)+'" alt="Foto '+n+'"><figcaption>Foto '+n+': '+esc(x.item||'Registro fotográfico')+'</figcaption></figure></div>'}).filter(Boolean).join('');
  const blocoFotos=!documental&&galeria?'<section class="report-section"><h2>3. Registro fotográfico</h2>'+galeria+'</section>':'';
  const conclusao=v.conclusao?.trim()?'<section class="report-section"><h2>'+(blocoFotos?'4':'3')+'. Considerações finais</h2><p>'+esc(v.conclusao)+'</p></section>':'';
- $('previa').innerHTML=marcaHTML+cab+meta+'<section class="report-section"><h2>1. Objetivo</h2><p>'+objective+'</p></section><section class="report-section"><h2>2. '+heading+'</h2>'+table+'</section>'+conclusao+(v.proxima?'<p><b>Próxima visita:</b> '+esc(dataBR(v.proxima))+'</p>':'')+'<div class="rv-rodape">'+(rodape?'<img src="'+esc(rodape)+'" alt="Rodapé institucional">':esc(identidade.nome_exibicao||'RG Certe')+' | SST')+'</div>';
+ $('previa').innerHTML=marcaHTML+cab+meta+'<section class="report-section"><h2>1. Objetivo</h2><p>'+objective+'</p></section><section class="report-section"><h2>2. '+(documental?'Verificação documental SST':'Quadro de não conformidades')+'</h2>'+(documental?table:tabelaCampo)+'</section>'+blocoFotos+conclusao+(v.proxima?'<p><b>Próxima visita:</b> '+esc(dataBR(v.proxima))+'</p>':'')+'<div class="rv-rodape">'+(rodape?'<img src="'+esc(rodape)+'" alt="Rodapé institucional">':esc(identidade.nome_exibicao||'RG Certe')+' | SST')+'</div>';
 }
 
 function textosRV(){
