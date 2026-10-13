@@ -166,6 +166,15 @@ function limparRodapeImpressao(){
 window.addEventListener('beforeprint',prepararRodapeImpressao);
 window.addEventListener('afterprint',limparRodapeImpressao);
 
+const CONCLUSOES_PADRAO={
+ documental:'Durante a visita técnica, foi realizada a verificação documental de Segurança e Saúde no Trabalho (SST), conforme os itens previstos no checklist.\n\nOs resultados encontram-se registrados neste relatório, com suas respectivas classificações e observações.\n\nRecomenda-se o acompanhamento das não conformidades e pendências identificadas, quando existentes, visando à regularização documental e à manutenção das condições de conformidade.',
+ campo:'Durante a visita técnica, foram avaliadas as condições de Segurança e Saúde no Trabalho (SST), considerando os ambientes, equipamentos e atividades contemplados no checklist.\n\nAs situações identificadas encontram-se registradas neste relatório, acompanhadas das respectivas observações e recomendações técnicas, quando aplicáveis.\n\nRecomenda-se o acompanhamento das medidas propostas e a verificação de sua implementação, visando à melhoria contínua das condições de segurança e saúde no ambiente de trabalho.'
+};
+function preencherConsideracoesFinais(){
+ const campo=$('conclusao'),padrao=documental?CONCLUSOES_PADRAO.documental:CONCLUSOES_PADRAO.campo;
+ const texto=campo.value.trim();
+ if(!texto || Object.values(CONCLUSOES_PADRAO).some(p=>p.trim()===texto)){campo.value=padrao;preview();}
+}
 async function carregarIdentificacaoChecklist(){
  const vistoriaId=qs.get('vistoria_id');
  if(!vistoriaId){$('resumo-checklist').textContent='Abra este relatório pelo botão Relatório da Gestão de Checklists.';return;}
@@ -188,6 +197,7 @@ async function carregarIdentificacaoChecklist(){
   const setores=dadosChecklist.map(x=>String(x.setor||'').toLowerCase());
   const campoOperacional=/moega|secador|elevador de canecas|empilhadeira|fornalha|beneficiamento|lavador|armaz[eé]m|almoxarifado|oficina|plasma|pintura|solda|produ[cç][aã]o|m[aá]quinas|transportador/;
   if(setores.some(x=>campoOperacional.test(x)))documental=false;
+  preencherConsideracoesFinais();
   fotosChecklist={};
   const fotos=dadosChecklist.filter(x=>x.foto_path);
   await Promise.all(fotos.map(async x=>{try{const resp=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1/object/sign/checklist-fotos/'+x.foto_path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});if(resp.ok){const dado=await resp.json();if(dado.signedURL)fotosChecklist[x.foto_path]='https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1'+dado.signedURL}}catch(e){console.warn('Foto indisponível',e)}}));
@@ -197,6 +207,6 @@ async function carregarIdentificacaoChecklist(){
   preview();
  }catch(erro){console.error('Falha ao importar identificação do checklist:',erro);$('aviso').textContent='Não foi possível importar a identificação do checklist: '+erro.message;$('resumo-checklist').textContent='Falha na importação. Não gere o PDF até resolver este erro.';}
 }
-function init(){const vs=JSON.parse(localStorage.getItem('sstVision.visitas.v1')||'[]'),visita=vs.find(v=>v.id===id);if(visita){for(const k of ['empresa','local','data','acompanhante','tipo','objetivo'])$(k).value=visita[k]||'';$('atividades').value=visita.observacoes||''}let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'null')}catch{}if(saved){for(const k of campos)if(saved.campos?.[k]!=null)$(k).value=saved.campos[k];itens=Array.isArray(saved.itens)?saved.itens.map(x=>({...x,fotos:Array.isArray(x.fotos)?x.fotos:(x.foto?[{id:crypto.randomUUID(),src:x.foto,legenda:x.legenda||''}]:[])})):[]}if(!itens.length)addItem();else renderItens();preview();carregarIdentidade();carregarIdentificacaoChecklist()}
+function init(){const vs=JSON.parse(localStorage.getItem('sstVision.visitas.v1')||'[]'),visita=vs.find(v=>v.id===id);if(visita){for(const k of ['empresa','local','data','acompanhante','tipo','objetivo'])$(k).value=visita[k]||'';$('atividades').value=visita.observacoes||''}let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'null')}catch{}if(saved){for(const k of campos)if(saved.campos?.[k]!=null)$(k).value=saved.campos[k];itens=Array.isArray(saved.itens)?saved.itens.map(x=>({...x,fotos:Array.isArray(x.fotos)?x.fotos:(x.foto?[{id:crypto.randomUUID(),src:x.foto,legenda:x.legenda||''}]:[])})):[]}if(!itens.length)addItem();else renderItens();preencherConsideracoesFinais();preview();carregarIdentidade();carregarIdentificacaoChecklist()}
 $('atualizarChecklist').onclick=()=>{if(confirm('Atualizar os dados do checklist? Os dados importados serão substituídos.'))carregarIdentificacaoChecklist()};$('adicionar').onclick=()=>{sync();addItem()};$('visualizar').onclick=melhorarComIA;$('previaSimples').onclick=preview;$('aceitarIA').onclick=aplicarSugestoes;$('descartarIA').onclick=()=>{esconderRevisao();preview()};$('salvar').onclick=()=>{try{localStorage.setItem(KEY,JSON.stringify(snapshot()));alert('Rascunho salvo neste dispositivo.')}catch(e){alert('Falha ao salvar: '+e.message)}};$('pdf').onclick=()=>{if(qs.get('vistoria_id')&&!dadosChecklist.length){alert('Não há itens do checklist carregados. Confirme o salvamento no Supabase e atualize os dados antes de emitir o PDF.');return}if(!$('hora_fim').value){const agora=new Date();$('hora_fim').value=[agora.getHours(),agora.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':')}try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}catch(e){console.warn('Não foi possível salvar os horários:',e)}preview();prepararRodapeImpressao();window.print()};init();
 </script></body></html>
