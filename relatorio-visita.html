@@ -286,6 +286,26 @@ async function carregarIdentificacaoChecklist(){
   else if(modeloCampo && !modeloDocumental)documental=false;
   else documental=qtdDoc>qtdCampo;
   $('tipo').value=documental?'Documental':'Campo';
+  // Vincula as medidas corretivas pelo item e local da vistoria.
+  // O snapshot prevalece sobre a medida padrão do cadastro.
+  const normMedida=v=>String(v||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().replace(/\\s+/g,' ').trim();
+  const chaveMedida=(local,item)=>normMedida(local)+'||'+normMedida(item);
+  if(!documental){
+   const snapResp=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/rest/v1/checklist_vistoria_itens?vistoria_id=eq.'+encodeURIComponent(vistoriaId)+'&select=item_mestre_id,local_nome_snapshot,item_descricao_snapshot,medida_corretiva_snapshot',{headers:{apikey:key,Authorization:'Bearer '+key}});
+   if(snapResp.ok){
+    const snapshots=await snapResp.json();
+    const ids=[...new Set(snapshots.map(x=>x.item_mestre_id).filter(Boolean))];
+    const medidasPadrao=new Map();
+    if(ids.length){
+     const filtro='('+ids.map(x=>String(x).replace(/[^a-zA-Z0-9-]/g,'')).filter(Boolean).join(',')+')';
+     const mestreResp=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/rest/v1/checklist_itens_mestre?id=in.'+encodeURIComponent(filtro)+'&select=id,medida_corretiva_recomendada',{headers:{apikey:key,Authorization:'Bearer '+key}});
+     if(mestreResp.ok)(await mestreResp.json()).forEach(x=>medidasPadrao.set(String(x.id),x.medida_corretiva_recomendada||''));
+    }
+    const mapa=new Map();
+    snapshots.forEach(x=>mapa.set(chaveMedida(x.local_nome_snapshot,x.item_descricao_snapshot),x.medida_corretiva_snapshot||medidasPadrao.get(String(x.item_mestre_id))||''));
+    dadosChecklist.forEach(x=>{x.recomendacao=mapa.get(chaveMedida(x.local_nome_snapshot||x.setor,x.item_descricao_snapshot||x.item))||''});
+   }else console.warn('Não foi possível carregar medidas corretivas da vistoria:',snapResp.status);
+  }
   fotosChecklist={};
   const fotos=dadosChecklist.filter(x=>x.foto_path);
   await Promise.all(fotos.map(async x=>{try{const resp=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1/object/sign/checklist-fotos/'+x.foto_path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});if(resp.ok){const dado=await resp.json();if(dado.signedURL)fotosChecklist[x.foto_path]='https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1'+dado.signedURL}}catch(e){console.warn('Foto indisponível',e)}}));
