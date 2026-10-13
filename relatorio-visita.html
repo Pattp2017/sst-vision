@@ -63,6 +63,30 @@
  .report .rv-foto-nc{break-inside:avoid!important}
  .report .rv-foto-nc img{max-height:48mm}
 }
+/* Apenas RV de campo: faixas de titulo sem borda inferior. */
+.rv-campo .report-section>h2{
+ background:#e1e7ef!important;
+ color:#273244!important;
+ border:0!important;
+ border-bottom:0!important;
+ box-shadow:none!important;
+ padding:6px 9px!important;
+ margin:10px 0 6px!important;
+ font-weight:700!important;
+ line-height:1.3!important;
+ -webkit-print-color-adjust:exact!important;
+ print-color-adjust:exact!important;
+}
+@media print{
+ .rv-campo .report-section>h2{
+  background:#e1e7ef!important;
+  color:#273244!important;
+  border:0!important;
+  padding:6px 9px!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important;
+ }
+}
 </style></head><body><header><div style="max-width:1000px;margin:auto"><a href="https://pattp2017.github.io/checklist/checklists.html">‹ Voltar aos checklists</a><h1>Relatório de Visita Técnica</h1><div>SST Vision · Segurança e Saúde no Trabalho</div></div></header>
 <main><section class="panel editor"><h2>Horários da visita</h2><p class="hint" id="aviso">Dados carregados da visita, quando disponível.</p><div class="grid"><div hidden><input id="empresa"></div><div hidden><input id="data" type="date"></div><div><label>Horário de início</label><input id="hora_inicio" type="time"></div><div><label>Horário de término</label><input id="hora_fim" type="time"></div><div hidden><input id="consultor"></div><div hidden><input id="responsavel_acompanhamento"></div><div hidden><input id="tipo"></div></div><div hidden><label>Objetivo da visita (opcional)</label><textarea id="objetivo">Realizar acompanhamento técnico das condições de Segurança e Saúde no Trabalho (SST), visando identificar oportunidades de melhoria e contribuir para a prevenção de acidentes e doenças ocupacionais.</textarea></div><div id="rv-antigo" hidden><h2>Atividades realizadas</h2><label>Descreva o que efetivamente foi executado</label><textarea id="atividades"></textarea><h2>2. Situações identificadas</h2><div id="itens"></div><div class="actions"><button class="btn secondary" id="adicionar">＋ Adicionar registro</button></div></div><h2>Resultados importados do checklist</h2><p class="hint" id="resumo-checklist">Carregando registros da vistoria...</p><button class="btn secondary" type="button" id="atualizarChecklist">Atualizar dados do checklist</button><h2>3. Considerações finais</h2><label>Considerações finais (editáveis)</label><textarea id="conclusao"></textarea><label>Próxima visita / acompanhamento</label><input id="proxima" type="date"><div class="actions"><button class="btn" id="salvar">Salvar rascunho</button><button class="btn secondary" id="visualizar" type="button">Melhorar com IA e visualizar</button><button class="btn secondary" id="previaSimples" type="button">Atualizar sem IA</button><button class="btn" id="pdf">Gerar PDF / Imprimir</button></div><div id="revisaoIA" class="panel" hidden style="border:1px solid #94a3b8"><h2>Revisão sugerida pela IA</h2><p class="hint">Confira os textos antes de aceitar. Nenhuma sugestão será aplicada automaticamente.</p><div id="comparacaoIA"></div><div class="actions"><button class="btn" type="button" id="aceitarIA">Aceitar sugestões</button><button class="btn secondary" type="button" id="descartarIA">Manter original</button></div></div><p class="hint">Rascunho salvo somente neste navegador. Para PDF, escolha “Salvar como PDF” na janela de impressão. Revise os registros antes de emitir.</p></section><section class="panel"><div id="previa" class="report"></div></section></main>
 <script src="https://pattp2017.github.io/treinamento/supabase-config.js"></script>
@@ -142,7 +166,7 @@ function preview(){
   const secNC='<section class="report-section"><h2>3. Quadro de não conformidades</h2>'+tabelaCampo+'</section>';
   const secFotos=galeria?'<section class="report-section"><h2>4. Registro fotográfico</h2>'+galeria+'</section>':'';
   const secFinal='<section class="report-section"><h2>5. Considerações finais</h2>'+conclusaoTexto+'</section>';
-  $('previa').innerHTML=base+secObjetivo+secAtividades+secNC+secFotos+secFinal+proxima+rodapeHTML;
+  $('previa').innerHTML=base+'<div class="rv-campo">'+secObjetivo+secAtividades+secNC+secFotos+secFinal+'</div>'+proxima+rodapeHTML;
  }
 }
 
