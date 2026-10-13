@@ -187,15 +187,10 @@ function preencherConsideracoesFinais(){
  const campo=$('conclusao');
  if(!dadosChecklist.length)return;
  const padrao=gerarConclusaoChecklist();
- const texto=campo.value.trim();
- const antigo=Object.values(CONCLUSOES_PADRAO).some(p=>p.trim()===texto);
- const automatico=campo.dataset.textoAutomatico===texto;
- if(!texto||antigo||automatico){
-  campo.value=padrao;campo.dataset.textoAutomatico=padrao;campo.dataset.avisoInconsistencia='';
- }else{
-  const temNC=dadosChecklist.some(x=>x.status==='NC');
-  const negaNC=/n[aã]o (?:sendo |foram |houve |h[aá] )?(?:registrad[ao]s? |identificad[ao]s? )?(?:n[aã]o conformidades|NC)|sem n[aã]o conformidades/i.test(texto);
-  campo.dataset.avisoInconsistencia=temNC&&negaNC?'1':'';
+ // O texto padrao acompanha os resultados atuais; edicoes manuais posteriores permanecem livres.
+ if(!campo.dataset.editadoManualmente){
+  campo.value=padrao;
+  campo.dataset.textoAutomatico=padrao;
  }
  preview();
 }
@@ -233,5 +228,5 @@ async function carregarIdentificacaoChecklist(){
  }catch(erro){console.error('Falha ao importar identificação do checklist:',erro);$('aviso').textContent='Não foi possível importar a identificação do checklist: '+erro.message;$('resumo-checklist').textContent='Falha na importação. Não gere o PDF até resolver este erro.';}
 }
 function init(){const vs=JSON.parse(localStorage.getItem('sstVision.visitas.v1')||'[]'),visita=vs.find(v=>v.id===id);if(visita){for(const k of ['empresa','local','data','acompanhante','tipo','objetivo'])$(k).value=visita[k]||'';$('atividades').value=visita.observacoes||''}let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'null')}catch{}if(saved){for(const k of campos)if(saved.campos?.[k]!=null)$(k).value=saved.campos[k];itens=Array.isArray(saved.itens)?saved.itens.map(x=>({...x,fotos:Array.isArray(x.fotos)?x.fotos:(x.foto?[{id:crypto.randomUUID(),src:x.foto,legenda:x.legenda||''}]:[])})):[]}if(!itens.length)addItem();else renderItens();preview();carregarIdentidade();carregarIdentificacaoChecklist()}
-$('conclusao').addEventListener('input',()=>{$('conclusao').dataset.textoAutomatico='';$('conclusao').dataset.avisoInconsistencia='';});$('atualizarChecklist').onclick=()=>{if(confirm('Atualizar os dados do checklist? Os dados importados serão substituídos.'))carregarIdentificacaoChecklist()};$('adicionar').onclick=()=>{sync();addItem()};$('visualizar').onclick=melhorarComIA;$('previaSimples').onclick=preview;$('aceitarIA').onclick=aplicarSugestoes;$('descartarIA').onclick=()=>{esconderRevisao();preview()};$('salvar').onclick=()=>{try{localStorage.setItem(KEY,JSON.stringify(snapshot()));alert('Rascunho salvo neste dispositivo.')}catch(e){alert('Falha ao salvar: '+e.message)}};$('pdf').onclick=()=>{if($('conclusao').dataset.avisoInconsistencia==='1'){alert('As considerações finais afirmam não haver NC, mas o checklist possui não conformidades. Corrija o texto antes de emitir o PDF.');$('conclusao').focus();return}if(qs.get('vistoria_id')&&!dadosChecklist.length){alert('Não há itens do checklist carregados. Confirme o salvamento no Supabase e atualize os dados antes de emitir o PDF.');return}if(!$('hora_fim').value){const agora=new Date();$('hora_fim').value=[agora.getHours(),agora.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':')}try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}catch(e){console.warn('Não foi possível salvar os horários:',e)}preview();prepararRodapeImpressao();window.print()};init();
+$('conclusao').addEventListener('input',()=>{$('conclusao').dataset.editadoManualmente='1';});$('atualizarChecklist').onclick=()=>{if(confirm('Atualizar os dados do checklist? Os dados importados serão substituídos.'))carregarIdentificacaoChecklist()};$('adicionar').onclick=()=>{sync();addItem()};$('visualizar').onclick=melhorarComIA;$('previaSimples').onclick=preview;$('aceitarIA').onclick=aplicarSugestoes;$('descartarIA').onclick=()=>{esconderRevisao();preview()};$('salvar').onclick=()=>{try{localStorage.setItem(KEY,JSON.stringify(snapshot()));alert('Rascunho salvo neste dispositivo.')}catch(e){alert('Falha ao salvar: '+e.message)}};$('pdf').onclick=()=>{if(qs.get('vistoria_id')&&!dadosChecklist.length){alert('Não há itens do checklist carregados. Confirme o salvamento no Supabase e atualize os dados antes de emitir o PDF.');return}if(!$('hora_fim').value){const agora=new Date();$('hora_fim').value=[agora.getHours(),agora.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':')}try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}catch(e){console.warn('Não foi possível salvar os horários:',e)}preview();prepararRodapeImpressao();window.print()};init();
 </script></body></html>
