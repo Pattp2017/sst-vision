@@ -144,7 +144,7 @@ function preview(){
  const cab='<div class="rv-timbrado"><table class="rv-timbrado-tabela"><thead><tr><th colspan="6" class="rv-timbrado-titulo">RELATÓRIO DE VISITA TÉCNICA | SST</th></tr><tr><th>Código</th><th>Estabelecido em</th><th>Revisado em</th><th>Elaborado por</th><th>Aprovado por</th><th>Página</th></tr></thead><tbody><tr><td>Form: RG_RV</td><td>Não informado</td><td>'+esc(dataBR(v.data))+'</td><td>'+esc(v.consultor||'Não informado')+'</td><td>A definir</td><td>Conforme PDF</td></tr></tbody></table></div>';
  const marca=githubRaw(identidade.marca_dagua_url),rodape=githubRaw(identidade.rodape_url);
  const marcaHTML=''; // RV sem imagem de fundo: evita sobreposição com a tabela e com o rodapé.
- const meta='<div class="report-meta">'+[['Empresa / Cliente',v.empresa],['Data da visita',dataBR(v.data)],['Início',v.hora_inicio],['Término',v.hora_fim],['Responsável técnico',v.consultor],['Responsável pela auditoria',v.responsavel_acompanhamento]].map(([k,val])=>'<div><b>'+k+':</b> '+esc(val||'Não informado')+'</div>').join('')+'</div>';
+ const meta='<div class="report-meta">'+[['Empresa / Cliente',v.empresa],['Data da visita',dataBR(v.data)],['Início',v.hora_inicio],['Término',v.hora_fim],['Profissional responsável pela visita',v.consultor],['Representante da empresa / Acompanhante',v.responsavel_acompanhamento]].map(([k,val])=>'<div><b>'+k+':</b> '+esc(val||'Não informado')+'</div>').join('')+'</div>';
  const objective=documental?'Verificar a documentação de SST, sua situação e aplicabilidade, nos limites dos itens avaliados.':'Realizar acompanhamento técnico das condições de Segurança e Saúde no Trabalho, visando identificar situações que necessitem de adequação.';
  const atividadesCampo='<section class="report-section"><h2>2. Atividades realizadas</h2><p>Inspeção dos ambientes e atividades contemplados no checklist, com registro das situações classificadas como não conformes.</p></section>';
  const table=rows.length?'<table class="report-table"><thead><tr><th>Local / Grupo</th><th>Documento / Item</th><th>Situação</th><th>Observação / Encaminhamento</th></tr></thead><tbody>'+rows.map((x,i)=>{const grupo=x.local_nome_snapshot||x.setor||'';const anterior=i>0?(rows[i-1].local_nome_snapshot||rows[i-1].setor||''):null;const inicio=i===0||grupo!==anterior;return '<tr'+(inicio?' class="rv-inicio-grupo"':'')+'><td>'+(inicio?'<strong>'+esc(grupo)+'</strong>':'')+'</td><td class="'+(x.status==='NC'?'rv-item-nc':x.status==='P'?'rv-item-p':'')+'">'+esc(x.item_descricao_snapshot||x.item||'')+'</td><td class="'+(x.status==='NC'?'rv-situacao-nc':x.status==='P'?'rv-situacao-p':'')+'">'+esc(escStatus[x.status]||x.status||'Não verificado')+'</td><td>'+esc(x.observacao||'')+'</td></tr>'}).join('')+'</tbody></table>':'<p>'+(dadosChecklist.length?'Nenhuma não conformidade ou pendência registrada nos itens avaliados.':'Nenhum item de checklist disponível para esta visita.')+'</p>';
@@ -262,8 +262,8 @@ async function carregarIdentificacaoChecklist(){
   if(!registro)throw Error('Vistoria não encontrada ou sem permissão de leitura.');
   $('empresa').value=registro.empresa_nome||'';
   $('data').value=registro.data_auditoria||'';
-  $('consultor').value=registro.responsavel_tecnico||'';
-  $('responsavel_acompanhamento').value=registro.responsavel_auditoria||'';
+  $('consultor').value=registro.responsavel_auditoria||'';
+  $('responsavel_acompanhamento').value=registro.responsavel_tecnico||'';
   // Prioridade: modelo documental explícito. Grupos como "Máquinas e Equipamentos"
   // também existem em auditorias documentais e não podem forçar modo campo.
   const modelo=String(registro.modelo_nome||'');
