@@ -8,7 +8,7 @@
 .rv-marca-dagua{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:var(--rv-marca-opacidade,.12);background-repeat:no-repeat;background-size:contain;background-position:center}
 .report{position:relative;isolation:isolate}
 .report>*:not(.rv-marca-dagua){position:relative;z-index:1}
-@media print{.rv-marca-dagua{position:fixed;top:-29mm;bottom:-24mm;left:-13mm;right:-13mm;print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+@media print{.rv-marca-dagua{display:none!important}}
 .rv-institucional{min-height:25mm;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--rv-cor);padding-bottom:8px}
 .rv-institucional img{max-height:22mm;max-width:68mm;object-fit:contain}
 .rv-institucional .marca-texto{font-weight:700;font-size:14px}
@@ -90,7 +90,7 @@ function preview(){
  const heading=documental?'Verificação documental SST':'Não conformidades identificadas';
  const cab='<div class="rv-timbrado"><table class="rv-timbrado-tabela"><thead><tr><th colspan="6" class="rv-timbrado-titulo">RELATÓRIO DE VISITA TÉCNICA | SST</th></tr><tr><th>Código</th><th>Estabelecido em</th><th>Revisado em</th><th>Elaborado por</th><th>Aprovado por</th><th>Página</th></tr></thead><tbody><tr><td>Form: RG_RV</td><td>Não informado</td><td>'+esc(dataBR(v.data))+'</td><td>'+esc(v.consultor||'Não informado')+'</td><td>A definir</td><td>Conforme PDF</td></tr></tbody></table></div>';
  const marca=githubRaw(identidade.marca_dagua_url),rodape=githubRaw(identidade.rodape_url);
- const marcaHTML=marca?'<div class="rv-marca-dagua" aria-hidden="true" style="background-image:url(&quot;'+esc(marca)+'&quot;);opacity:'+Math.min(.3,Math.max(.05,Number(identidade.marca_dagua_opacidade)||.12))+'"></div>':'';
+ const marcaHTML=''; // RV sem imagem de fundo: evita sobreposição com a tabela e com o rodapé.
  const meta='<div class="report-meta">'+[['Empresa / Cliente',v.empresa],['Data da visita',dataBR(v.data)],['Início',v.hora_inicio],['Término',v.hora_fim],['Responsável técnico',v.consultor],['Responsável pela auditoria',v.responsavel_acompanhamento]].map(([k,val])=>'<div><b>'+k+':</b> '+esc(val||'Não informado')+'</div>').join('')+'</div>';
  const objective=documental?'Verificar a documentação de SST, sua situação e aplicabilidade, nos limites dos itens avaliados.':'Registrar as não conformidades identificadas durante a inspeção de SST.';
  const table=rows.length?'<table class="report-table"><thead><tr><th>Local / Grupo</th><th>Documento / Item</th><th>Situação</th><th>Observação / Encaminhamento</th></tr></thead><tbody>'+rows.map((x,i)=>{const grupo=x.local_nome_snapshot||x.setor||'';const anterior=i>0?(rows[i-1].local_nome_snapshot||rows[i-1].setor||''):null;const inicio=i===0||grupo!==anterior;return '<tr'+(inicio?' class="rv-inicio-grupo"':'')+'><td>'+(inicio?'<strong>'+esc(grupo)+'</strong>':'')+'</td><td class="'+(x.status==='NC'?'rv-item-nc':x.status==='P'?'rv-item-p':'')+'">'+esc(x.item_descricao_snapshot||x.item||'')+'</td><td class="'+(x.status==='NC'?'rv-situacao-nc':x.status==='P'?'rv-situacao-p':'')+'">'+esc(escStatus[x.status]||x.status||'Não verificado')+'</td><td>'+esc(x.observacao||'')+'</td></tr>'}).join('')+'</tbody></table>':'<p>'+(dadosChecklist.length?'Nenhuma não conformidade registrada nos itens avaliados.':'Nenhum item de checklist disponível para esta visita.')+'</p>';
