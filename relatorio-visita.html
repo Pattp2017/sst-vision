@@ -127,9 +127,23 @@ function preview(){
  const campoRows=rows.map((x,i)=>{const n=String(i+1).padStart(2,'0');const ref=n;const foto=fotosChecklist[x.foto_path];return '<tr><td>'+ref+'</td><td>'+esc(x.setor||'')+'</td><td>'+esc(x.item||'')+'</td><td>'+esc(x.observacao||'Não detalhada no checklist')+'</td><td>'+esc(x.recomendacao||'A definir pelo responsável técnico')+'</td><td>'+(foto?n:'—')+'</td></tr>'}).join('');
  const tabelaCampo=rows.length?'<table class="report-table rv-quadro-nc"><thead><tr><th>Nº NC</th><th>Local / Setor</th><th>Item avaliado</th><th>Constatação técnica</th><th>Recomendação técnica</th><th>Foto nº</th></tr></thead><tbody>'+campoRows+'</tbody></table>':'<p>Nenhuma não conformidade registrada nos itens avaliados.</p>';
  const galeria=rows.map((x,i)=>{const foto=fotosChecklist[x.foto_path];if(!foto)return '';const n=String(i+1).padStart(2,'0');return '<div class="rv-foto-nc"><strong>'+(x.status==='P'?'Pendência':'Não Conformidade')+' – '+n+' | '+esc(x.setor||'')+' | '+esc(x.item||'')+'</strong><figure><img src="'+esc(foto)+'" alt="Foto '+n+'"><figcaption>Foto '+n+': '+esc(x.item||'Registro fotográfico')+'</figcaption></figure></div>'}).filter(Boolean).join('');
- const blocoFotos=!documental&&galeria?'<section class="report-section"><h2>4. Registro fotográfico</h2>'+galeria+'</section>':'';
- const conclusao=v.conclusao?.trim()?'<section class="report-section"><h2>'+(blocoFotos?'4':'3')+'. Considerações finais</h2><p>'+esc(v.conclusao)+'</p></section>':'';
- $('previa').innerHTML=marcaHTML+cab+meta+'<section class="report-section"><h2>1. Objetivo</h2><p>'+objective+'</p></section><section class="report-section"><h2>2. '+(documental?'Verificação documental SST':'Não conformidades e pendências')+'</h2>'+(documental?table:tabelaCampo)+'</section>'+blocoFotos+conclusao+(v.proxima?'<p><b>Próxima visita:</b> '+esc(dataBR(v.proxima))+'</p>':'')+'<div class="rv-rodape">'+(rodape?'<img src="'+esc(rodape)+'" alt="Rodapé institucional">':esc(identidade.nome_exibicao||'RG Certe')+' | SST')+'</div>';
+ const base=marcaHTML+cab+meta;
+ const rodapeHTML='<div class="rv-rodape">'+(rodape?'<img src="'+esc(rodape)+'" alt="Rodapé institucional">':esc(identidade.nome_exibicao||'RG Certe')+' | SST')+'</div>';
+ const proxima=v.proxima?'<p><b>Próxima visita:</b> '+esc(dataBR(v.proxima))+'</p>':'';
+ const conclusaoTexto=v.conclusao?.trim()?'<p>'+esc(v.conclusao)+'</p>':'';
+ if(documental){
+  const secObjetivo='<section class="report-section"><h2>1. Objetivo</h2><p>Verificar a documentação de SST, sua situação e aplicabilidade, nos limites dos itens avaliados.</p></section>';
+  const secDocumentos='<section class="report-section"><h2>2. Verificação documental SST</h2>'+table+'</section>';
+  const secFinal='<section class="report-section"><h2>3. Considerações finais</h2>'+conclusaoTexto+'</section>';
+  $('previa').innerHTML=base+secObjetivo+secDocumentos+secFinal+proxima+rodapeHTML;
+ }else{
+  const secObjetivo='<section class="report-section"><h2>1. Objetivo</h2><p>Realizar acompanhamento técnico das condições de Segurança e Saúde no Trabalho, visando identificar situações que necessitem de adequação.</p></section>';
+  const secAtividades='<section class="report-section"><h2>2. Atividades realizadas</h2><p>Inspeção dos ambientes e atividades contemplados no checklist, com registro das situações classificadas como não conformes.</p></section>';
+  const secNC='<section class="report-section"><h2>3. Quadro de não conformidades</h2>'+tabelaCampo+'</section>';
+  const secFotos=galeria?'<section class="report-section"><h2>4. Registro fotográfico</h2>'+galeria+'</section>':'';
+  const secFinal='<section class="report-section"><h2>5. Considerações finais</h2>'+conclusaoTexto+'</section>';
+  $('previa').innerHTML=base+secObjetivo+secAtividades+secNC+secFotos+secFinal+proxima+rodapeHTML;
+ }
 }
 
 function textosRV(){
@@ -189,7 +203,7 @@ const CONCLUSOES_PADRAO={
 };
 function gerarConclusaoChecklist(){
  const ncs=dadosChecklist.filter(x=>x.status==='NC').length;
- const pendentes=dadosChecklist.filter(x=>x.status==='P').length;
+ const pendentes=documental?dadosChecklist.filter(x=>x.status==='P').length:0;
  const inicio=documental
   ?'Durante a visita técnica, foi realizada a verificação documental de Segurança e Saúde no Trabalho (SST), conforme os itens previstos no checklist.'
   :'Durante a visita técnica, foram avaliadas as condições de Segurança e Saúde no Trabalho (SST) nos ambientes e atividades contemplados no checklist.';
