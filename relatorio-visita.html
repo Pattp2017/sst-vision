@@ -324,7 +324,7 @@ async function carregarIdentificacaoChecklist(){
   await Promise.all(fotos.map(async x=>{try{const resp=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1/object/sign/checklist-fotos/'+x.foto_path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});if(resp.ok){const dado=await resp.json();if(dado.signedURL)fotosChecklist[x.foto_path]='https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1'+dado.signedURL}}catch(e){console.warn('Foto indisponível',e)}}));
   if(!dadosChecklist.length){$('resumo-checklist').textContent='Nenhum registro salvo encontrado no banco para esta vistoria. Salve e sincronize o checklist antes de gerar o PDF.';return;}
   preencherConsideracoesFinais();
-  $('resumo-checklist').textContent=(documental?'Documental: somente NC e P. ':'Campo: somente NC. ')+dadosChecklist.length+' itens carregados; '+dadosChecklist.filter(x=>x.status==='NC'||(documental&&x.status==='P')).length+' incluídos no relatório.';
+  $('resumo-checklist').textContent=(documental?'Documental: somente NC e P. ':'Campo: somente NC. ')+dadosChecklist.length+' itens carregados; '+dadosChecklist.filter(x=>x.status==='NC'||(documental&&x.status==='P')).length+' incluídos no relatório; '+dadosChecklist.reduce((total,x)=>total+caminhosFotos(x.foto_path).length,0)+' foto(s) registradas no banco.';
   $('aviso').textContent='Identificação e resultados importados do checklist.';
   preview();
  }catch(erro){console.error('Falha ao importar identificação do checklist:',erro);$('aviso').textContent='Não foi possível importar a identificação do checklist: '+erro.message;$('resumo-checklist').textContent='Falha na importação. Não gere o PDF até resolver este erro.';}
