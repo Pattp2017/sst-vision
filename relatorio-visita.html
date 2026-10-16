@@ -55,6 +55,9 @@
 .report .rv-quadro-nc th:last-child{width:9%}
 .report .rv-foto-nc{margin:12px 0 18px;break-inside:avoid}
 .report .rv-foto-nc figure{margin:8px 0}
+.report .rv-fotos-grid{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start}
+.report .rv-fotos-grid figure{flex:0 1 calc(50% - 6px);min-width:160px;break-inside:avoid}
+.report .rv-fotos-grid img{width:100%;max-width:100%;height:auto;max-height:58mm;object-fit:contain}
 .report .rv-foto-nc img{display:block;max-width:31%;max-height:58mm;object-fit:contain}
 .report .rv-foto-nc figcaption{margin-top:5px;color:#475569}
 @media print{
@@ -136,6 +139,16 @@ async function carregarIdentidade(){
  document.documentElement.style.setProperty('--rv-cor',/^#[0-9a-fA-F]{6}$/.test(identidade.cor_principal||'')?identidade.cor_principal:'#0b8f43');
  preview();
 }
+function caminhosFotos(valor){
+ if(!valor)return [];
+ if(Array.isArray(valor))return valor.filter(Boolean);
+ if(typeof valor!=='string')return [];
+ if(valor.trim().startsWith('[')){
+  try{const lista=JSON.parse(valor);if(Array.isArray(lista))return lista.filter(x=>typeof x==='string'&&x)}catch(e){console.warn('Lista de fotos inválida',e)}
+ }
+ return [valor];
+}
+function fotosDoItem(item){return caminhosFotos(item.foto_path).map(p=>fotosChecklist[p]).filter(Boolean)}
 function preview(){
  const v=snapshot().campos;
  const escStatus={C:'Conforme',NC:'Não conforme',P:'Pendente',NA:'Não aplicável'};
@@ -148,9 +161,9 @@ function preview(){
  const objective=documental?'Verificar a documentação de SST, sua situação e aplicabilidade, nos limites dos itens avaliados.':'Realizar acompanhamento técnico das condições de Segurança e Saúde no Trabalho, visando identificar situações que necessitem de adequação.';
  const atividadesCampo='<section class="report-section"><h2>2. Atividades realizadas</h2><p>Inspeção dos ambientes e atividades contemplados no checklist, com registro das situações classificadas como não conformes.</p></section>';
  const table=rows.length?'<table class="report-table"><thead><tr><th>Local / Grupo</th><th>Documento / Item</th><th>Situação</th><th>Observação / Encaminhamento</th></tr></thead><tbody>'+rows.map((x,i)=>{const grupo=x.local_nome_snapshot||x.setor||'';const anterior=i>0?(rows[i-1].local_nome_snapshot||rows[i-1].setor||''):null;const inicio=i===0||grupo!==anterior;return '<tr'+(inicio?' class="rv-inicio-grupo"':'')+'><td>'+(inicio?'<strong>'+esc(grupo)+'</strong>':'')+'</td><td class="'+(x.status==='NC'?'rv-item-nc':x.status==='P'?'rv-item-p':'')+'">'+esc(x.item_descricao_snapshot||x.item||'')+'</td><td class="'+(x.status==='NC'?'rv-situacao-nc':x.status==='P'?'rv-situacao-p':'')+'">'+esc(escStatus[x.status]||x.status||'Não verificado')+'</td><td>'+esc(x.observacao||'')+'</td></tr>'}).join('')+'</tbody></table>':'<p>'+(dadosChecklist.length?'Nenhuma não conformidade ou pendência registrada nos itens avaliados.':'Nenhum item de checklist disponível para esta visita.')+'</p>';
- const campoRows=rows.map((x,i)=>{const n=String(i+1).padStart(2,'0');const ref=n;const foto=fotosChecklist[x.foto_path];return '<tr><td>'+ref+'</td><td>'+esc(x.setor||'')+'</td><td>'+esc(x.item||'')+'</td><td>'+esc(x.observacao||'Não detalhada no checklist')+'</td><td>'+esc(x.recomendacao||'A definir pelo responsável técnico')+'</td><td>'+(foto?n:'—')+'</td></tr>'}).join('');
+ const campoRows=rows.map((x,i)=>{const n=String(i+1).padStart(2,'0');const ref=n;const fotos=fotosDoItem(x);return '<tr><td>'+ref+'</td><td>'+esc(x.setor||'')+'</td><td>'+esc(x.item||'')+'</td><td>'+esc(x.observacao||'Não detalhada no checklist')+'</td><td>'+esc(x.recomendacao||'A definir pelo responsável técnico')+'</td><td>'+(fotos.length?n:'—')+'</td></tr>'}).join('');
  const tabelaCampo=rows.length?'<table class="report-table rv-quadro-nc"><thead><tr><th>Nº NC</th><th>Local / Setor</th><th>Item avaliado</th><th>Constatação técnica</th><th>Recomendação técnica</th><th>Foto nº</th></tr></thead><tbody>'+campoRows+'</tbody></table>':'<p>Nenhuma não conformidade registrada nos itens avaliados.</p>';
- const galeria=rows.map((x,i)=>{const foto=fotosChecklist[x.foto_path];if(!foto)return '';const n=String(i+1).padStart(2,'0');return '<div class="rv-foto-nc"><strong>'+(x.status==='P'?'Pendência':'Não Conformidade')+' – '+n+' | '+esc(x.setor||'')+' | '+esc(x.item||'')+'</strong><figure><img src="'+esc(foto)+'" alt="Foto '+n+'"><figcaption>Foto '+n+': '+esc(x.item||'Registro fotográfico')+'</figcaption></figure></div>'}).filter(Boolean).join('');
+ const galeria=rows.map((x,i)=>{const fotos=fotosDoItem(x);if(!fotos.length)return '';const n=String(i+1).padStart(2,'0');return '<div class="rv-foto-nc"><strong>'+(x.status==='P'?'Pendência':'Não Conformidade')+' – '+n+' | '+esc(x.setor||'')+' | '+esc(x.item||'')+'</strong><div class="rv-fotos-grid">'+fotos.map((foto,j)=>'<figure><img src="'+esc(foto)+'" alt="Foto '+n+'.'+(j+1)+'"><figcaption>Foto '+n+(fotos.length>1?'.'+(j+1):'')+': '+esc(x.item||'Registro fotográfico')+'</figcaption></figure>').join('')+'</div></div>'}).filter(Boolean).join('');
  const base=marcaHTML+cab+meta;
  const rodapeHTML='<div class="rv-rodape">'+(rodape?'<img src="'+esc(rodape)+'" alt="Rodapé institucional">':esc(identidade.nome_exibicao||'RG Certe')+' | SST')+'</div>';
  const proxima=v.proxima?'<p><b>Próxima visita:</b> '+esc(dataBR(v.proxima))+'</p>':'';
@@ -307,7 +320,7 @@ async function carregarIdentificacaoChecklist(){
    }else console.warn('Não foi possível carregar medidas corretivas da vistoria:',snapResp.status);
   }
   fotosChecklist={};
-  const fotos=dadosChecklist.filter(x=>x.foto_path);
+  const fotos=[...new Set(dadosChecklist.flatMap(x=>caminhosFotos(x.foto_path)))].map(foto_path=>({foto_path}));
   await Promise.all(fotos.map(async x=>{try{const resp=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1/object/sign/checklist-fotos/'+x.foto_path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});if(resp.ok){const dado=await resp.json();if(dado.signedURL)fotosChecklist[x.foto_path]='https://uofnninqxnsvaemxpwhh.supabase.co/storage/v1'+dado.signedURL}}catch(e){console.warn('Foto indisponível',e)}}));
   if(!dadosChecklist.length){$('resumo-checklist').textContent='Nenhum registro salvo encontrado no banco para esta vistoria. Salve e sincronize o checklist antes de gerar o PDF.';return;}
   preencherConsideracoesFinais();
