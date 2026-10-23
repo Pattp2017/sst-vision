@@ -328,7 +328,7 @@ async function carregarIdentificacaoChecklist(){
   // O snapshot prevalece sobre a medida padrão do cadastro.
   const normMedida=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
   const chaveMedida=(local,item)=>normMedida(local)+'||'+normMedida(item);
-  if(!documental){
+  {
    const snapResp=await fetch('https://uofnninqxnsvaemxpwhh.supabase.co/rest/v1/checklist_vistoria_itens?vistoria_id=eq.'+encodeURIComponent(vistoriaId)+'&select=item_mestre_id,local_nome_snapshot,item_descricao_snapshot,medida_corretiva_snapshot',{headers:{apikey:key,Authorization:'Bearer '+key}});
    if(snapResp.ok){
     const snapshots=await snapResp.json();
