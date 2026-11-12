@@ -1,8 +1,11 @@
-const CACHE_NAME = "sst-vision-v18";
+const CACHE_NAME = "sst-vision-v19";
 
 const ARQUIVOS_CACHE = [
   "./",
   "./index.html",
+  "./visitas.html",
+  "./js/google-agenda-core.js",
+  "./js/google-agenda.js",
   "./analise.html",
   "./analises.html",
   "./analise-detalhe.html",
@@ -26,8 +29,11 @@ self.addEventListener("activate", (event) => {
 });
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  // Dados autenticados do Google nunca devem entrar no cache offline.
+  if (new URL(event.request.url).origin !== self.location.origin || event.request.headers.has("Authorization")) return;
   event.respondWith(fetch(event.request).then((r) => {
     if (r && r.status === 200 && r.type !== "opaque") caches.open(CACHE_NAME).then((c) => c.put(event.request, r.clone()));
     return r;
   }).catch(() => caches.match(event.request).then((r) => r || (event.request.mode === "navigate" ? caches.match("./index.html") : undefined))));
 });
+
