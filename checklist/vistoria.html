@@ -495,7 +495,7 @@
   async function iniciarAplicacao() {
     try {
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js?v=8')
+        navigator.serviceWorker.register('sw.js?v=9')
           .catch(erro => console.warn('Service Worker não registrado.', erro));
       }
 

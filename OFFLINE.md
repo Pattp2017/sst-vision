@@ -8,6 +8,8 @@ Abra o painel com internet no mesmo navegador que usará em campo. Aguarde a men
 
 Abra previamente cada vistoria que será usada e confirme o carregamento de seu modelo. Permanecem o salvamento local e a fila de sincronização originais. Criar uma nova vistoria com cadastros ainda não carregados requer internet. A carga dos arquivos não baixa automaticamente todas as vistorias e fotos do banco.
 
+A ronda de extintores, dentro do Checklist, salva automaticamente durante o preenchimento neste aparelho, com cópia adicional em IndexedDB e recuperação ao reabrir. Não exige exportação ou importação. Empresas e locais consultados online também ficam disponíveis localmente. A ronda ainda não possui integração de sincronização com o banco; isso não deve ser confundido com a fila de sincronização das vistorias.
+
 ## Análise de Risco
 
 Fotos, dados e achados são guardados como rascunhos em IndexedDB neste aparelho. Há salvamento após alterações e botão **Salvar neste aparelho**. A lista **Rascunhos de análise neste aparelho** permite reabrir registros, inclusive com foto e achados manuais.

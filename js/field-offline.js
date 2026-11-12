@@ -3,7 +3,7 @@
   const scriptURL = document.currentScript.src;
   const start = () => {
   const root = new URL('../', scriptURL);
-  const cacheName = `sst-vision:${root.href}:v23`;
+  const cacheName = `sst-vision:${root.href}:v24`;
   const database = new Promise((resolve,reject) => {
     const request=indexedDB.open('sst-vision-field',1);
     request.onupgradeneeded=()=>request.result.createObjectStore('drafts',{keyPath:'id'});
