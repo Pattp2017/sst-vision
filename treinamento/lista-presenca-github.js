@@ -79,8 +79,6 @@ ${rodapeDocumento(identidade)}
     const documento=String(identidade.cnpj||'').replace(/\D/g,'');
     const cnpj=documento.length===14?documento.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,'$1.$2.$3/$4-$5'):(identidade.cnpj||'__________________');
     const endereco=identidade.endereco||'________________________________________';
-    const localEndereco=String(identidade.endereco||'').match(/(?:^|[,;–—])\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ .']+?)\s*[-/]\s*([A-Z]{2})(?=\s*(?:[,;]|$))/);
-    const foro=[identidade.cidade,identidade.uf].filter(Boolean).join('/')||(localEndereco?localEndereco[1].trim()+'/'+localEndereco[2]:'____________________________');
     const folhas=[];
     for(let i=0;i<participantes.length;i+=2){
       folhas.push('<div class="termo-folha">'+participantes.slice(i,i+2).map(p=>`<section class="termo-imagem">
@@ -91,7 +89,6 @@ ${rodapeDocumento(identidade)}
         <div class="termo-clausula"><span>✓</span><p>Declaro ainda que recebi todas as informações necessárias sobre a utilização da minha imagem e que não há qualquer tipo de vínculo empregatício ou contratual entre mim e a empresa.</p></div>
         <div class="termo-clausula"><span>✓</span><p>Autorizo a empresa a utilizar minha imagem em qualquer meio de comunicação, incluindo, mas não se limitando a: televisão, rádio, jornais, revistas, internet, mídias sociais e quaisquer outros meios de comunicação que existam ou venham a existir.</p></div>
         <div class="termo-clausula"><span>✓</span><p>Declaro ainda que não haverá nenhum tipo de pagamento ou remuneração pelo uso da minha imagem, seja ela atual ou futura.</p></div>
-        <div class="termo-clausula"><span>✓</span><p>Fica eleito o foro da Comarca de ${esc(foro)} para dirimir quaisquer dúvidas ou controvérsias oriundas deste Termo de Autorização de Uso de Imagem.</p></div>
         <div class="termo-assinatura"><div class="termo-assinar"><span>________/________/________</span><span class="termo-linha"></span></div><div class="termo-nome">${esc(p.nome)} - ${esc(formatarCPF(p.cpf))}</div></div></div><div class="termo-rodape"></div>
       </section>`).join('')+'</div>');
     }
