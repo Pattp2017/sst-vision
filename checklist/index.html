@@ -22,18 +22,9 @@
       <a href="novo-checklist.html" class="menu-card"><div class="menu-icon">➕</div><strong>Novo Checklist</strong><span>Iniciar uma nova vistoria</span></a>
       <a href="checklists.html" class="menu-card"><div class="menu-icon">📋</div><strong>Checklists</strong><span>Consultar e continuar vistorias</span></a>
       <a href="inspecao-extintores.html" class="menu-card"><div class="menu-icon">🧯</div><strong>Inspeção de Extintores</strong><span>Ronda e verificação individual</span></a>
-      <button type="button" class="menu-card" id="btnCadastros"><div class="menu-icon">⚙️</div><strong>Cadastros</strong><span>Locais, itens e modelos de inspeção</span></button>
-      <div class="cadastros" id="menuCadastros">
-        <a href="cadastro-locais.html" class="cadastro-link">📍 Locais</a>
-        <a href="cadastro-itens.html" class="cadastro-link">☑️ Itens do Checklist</a>
-        <a href="modelos-inspecao.html" class="cadastro-link">🧩 Modelos de Inspeção</a>
-      </div>
+      <a class="menu-card" href="../cadastros/index.html?grupo=checklist"><div class="menu-icon">⚙️</div><strong>Cadastros</strong><span>Abrir central de cadastros</span></a>
     </section>
   </main>
-  <script>
-    const btnCadastros=document.getElementById('btnCadastros');
-    const menuCadastros=document.getElementById('menuCadastros');
-    btnCadastros.addEventListener('click',()=>menuCadastros.classList.toggle('aberto'));
-  </script>
+
 </body>
 </html>

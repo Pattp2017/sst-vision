@@ -1832,7 +1832,7 @@ document.querySelectorAll('.nav button[data-page]').forEach(btn=>{
 });
 
 window.addEventListener('hashchange',()=>{
-  openPage((location.hash||'#matriz').slice(1),false);
+  openPage((location.hash||'#estoque').slice(1),false);
 });
 
 cargoSelect.addEventListener('change',renderMatrix);
@@ -1982,7 +1982,7 @@ async function iniciarSistemaAutenticado(session,empresaId,empresaNome){
     renderOutrosFichaEntregas();
   }
 
-  openPage((location.hash||'#matriz').slice(1),false);
+  openPage((location.hash||'#estoque').slice(1),false);
 }
 
 function mostrarLogin(){

@@ -51,5 +51,5 @@
   document.getElementById('voltar').onclick=()=>location.href='index.html';document.getElementById('novo').onclick=abrirNovo;document.getElementById('cancelar').onclick=fechar;document.getElementById('salvar').onclick=salvar;buscaEl.oninput=render;modal.addEventListener('click',e=>{if(e.target===modal)fechar()});listaEl.addEventListener('click',e=>{const b=e.target.closest('button[data-acao]');if(!b)return;if(b.dataset.acao==='editar')abrirEdicao(b.dataset.id);if(b.dataset.acao==='status')alterarStatus(b.dataset.id)});carregar();
 })();
 </script>
-</body>
+<script src="../js/cadastro-context.js" defer></script></body>
 </html>
