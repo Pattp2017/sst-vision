@@ -1,9 +1,11 @@
 const CACHE_PREFIX = `sst-vision:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v25`;
+const CACHE_NAME = `${CACHE_PREFIX}v26`;
 const ARQUIVOS_CACHE = [
   "./",
   "./index.html",
   "./visitas.html",
+  "./js/deslocamento-core.js",
+  "./js/deslocamento.js",
   "./js/google-agenda-core.js",
   "./js/google-agenda.js",
   "./analise.html",
@@ -79,3 +81,4 @@ self.addEventListener('fetch', event => {
     return await cache.match(canonical) || Response.error();
   }));
 });
+
