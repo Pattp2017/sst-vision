@@ -21,8 +21,8 @@
     <label>Data final <small>(opcional)</small><input id="avFim" type="date"></label>
     <label>Quantidade de linhas em branco<input id="avLinhas" type="number" min="1" max="100" step="1" value="15" required><small style="display:block;font-weight:normal;color:#64748b;margin-top:6px">De 1 a 100 linhas. A impressão distribui as linhas entre as páginas.</small></label>
     <label class="full">Conteúdo programático <small>(opcional)</small><textarea id="avConteudo" rows="6"></textarea></label>
-    <label class="full">Forma de desenvolvimento <small>(opcional)</small><textarea id="avForma" rows="2"></textarea></label>
-    <label class="full">Comentários gerais <small>(opcional)</small><textarea id="avComentarios" rows="2"></textarea></label>
+    <label class="full">Forma de desenvolvimento <small>(opcional)</small><textarea id="avForma" rows="2">Explicação oral equipamento visual complementar, demonstrações e atividades práticas.</textarea></label>
+    <label class="full">Comentários gerais <small>(opcional)</small><textarea id="avComentarios" rows="2">Através da análise global, considero todos aptos a realizarem as funções pré determinadas.</textarea></label>
     </div><p id="avAviso" class="aviso" role="status"></p><div class="acoes"><button type="submit" class="btn primario" id="avGerar">Visualizar lista em branco</button><button type="button" class="btn" id="avImprimir" disabled>Imprimir / Salvar PDF</button></div></form></div>
     <div id="avPreviewBox" class="card" hidden><h3>Prévia da lista</h3><iframe id="avPreview" title="Lista de presença sem participantes" style="width:100%;height:75vh;min-height:500px;border:1px solid #dde6e3;border-radius:8px;background:white"></iframe></div>`;
     const $=id=>area.querySelector('#'+id);
