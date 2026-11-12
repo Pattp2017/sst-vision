@@ -260,7 +260,7 @@
       const base=grupo[0],vistos=new Set(),participantes=[];
       for(const {lista} of grupo)for(const p of lista.participantes){const cpf=String(p.cpf||'').replace(/\D/g,''),chave=cpf||String(p.nome||'').trim().toLocaleLowerCase('pt-BR');if(vistos.has(chave))continue;vistos.add(chave);participantes.push(p);}
       const destino=grupos.size>1?await raiz.getDirectoryHandle(limparNome(base.ev.empresa||'Cliente'),{create:true}):raiz;
-      await salvarTermosImagem({...base.lista,htmlTermoImagem:window.montarTermoImagemGithub(participantes)},destino);
+      await salvarTermosImagem({...base.lista,htmlTermoImagem:window.montarTermoImagemGithub(participantes,base.lista.identidade)},destino);
     }
   };
   window.gerarTreinamentoLoteGithub=async function(ev,raiz,opcoes={},progresso=()=>{}){
@@ -328,3 +328,4 @@
     }catch(e){aviso.remove();alert('Erro ao gerar a pasta: '+e.message);}
   };
 })();
+
