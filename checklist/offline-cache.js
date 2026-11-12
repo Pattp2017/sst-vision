@@ -1,0 +1,75 @@
+// =========================================================
+// offline-cache.js - Cache offline da vistoria
+// =========================================================
+(function () {
+  'use strict';
+  const VERSION = 1;
+  const PREFIX = 'checklist_offline_v1_';
+
+  function getVistoriaId() {
+    const p = new URLSearchParams(location.search);
+    return p.get('vistoria_id') || localStorage.getItem('checklist_vistoria_id') || '';
+  }
+  function key() { return PREFIX + (getVistoriaId() || 'sem_id'); }
+  function read() {
+    try { return JSON.parse(localStorage.getItem(key()) || 'null'); }
+    catch (e) { console.warn('Cache offline inválido.', e); return null; }
+  }
+  function write(payload) {
+    try {
+      localStorage.setItem(key(), JSON.stringify({
+        version: VERSION, atualizado_em: new Date().toISOString(), ...payload
+      }));
+      return true;
+    } catch (e) { console.error('Falha ao gravar cache offline.', e); return false; }
+  }
+  function saveModel(vistoria, dados) {
+    if (!Array.isArray(dados) || !dados.length) return false;
+    const atual = read() || {};
+    return write({ ...atual, vistoria: vistoria || atual.vistoria || null, modelo: dados });
+  }
+  function loadModel() {
+    const c = read();
+    return Array.isArray(c?.modelo) && c.modelo.length ? c : null;
+  }
+  function setBanner(text, tipo) {
+    let el = document.getElementById('offline-status');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'offline-status';
+      el.style.cssText = 'display:none;margin:10px 0;padding:10px 12px;border-radius:8px;font-weight:700;text-align:center;border:1px solid #e5e7eb;';
+      document.querySelector('.controls-top')?.insertAdjacentElement('beforebegin', el);
+    }
+    el.textContent = text;
+    el.style.display = 'block';
+    el.style.background = tipo === 'offline' ? '#fff7d6' : '#e9f8ef';
+    el.style.color = tipo === 'offline' ? '#725600' : '#176b39';
+  }
+
+  function setNetworkBackground(online) {
+    // Indicação discreta no fundo da página, sem borda fixa sobre os botões.
+    const cor = online ? '' : '#fff3e6';
+    document.documentElement.style.backgroundColor = cor;
+    document.body.style.backgroundColor = cor;
+    const bordaAntiga = document.getElementById('checklist-network-border');
+    if (bordaAntiga) bordaAntiga.remove();
+  }
+
+  function updateNetworkStatus() {
+    const online = navigator.onLine;
+    setNetworkBackground(online);
+
+    if (!online) setBanner('📴 Modo offline • dados permanecem neste aparelho', 'offline');
+    else {
+      const el = document.getElementById('offline-status');
+      if (el) el.style.display = 'none';
+    }
+  }
+
+  window.addEventListener('online', updateNetworkStatus);
+  window.addEventListener('offline', updateNetworkStatus);
+  document.addEventListener('DOMContentLoaded', updateNetworkStatus);
+  updateNetworkStatus();
+
+  window.ChecklistOffline = { saveModel, loadModel, read, write, updateNetworkStatus };
+})();
