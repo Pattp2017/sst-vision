@@ -2,18 +2,27 @@
 const $=id=>document.getElementById(id),CORE=globalThis.SSTGoogleAgenda;
 const CONFIG='sstVision.googleClientId.v1';
 const DEFAULT_CLIENT_ID='293321064147-ike097nmcs3kj9dubuv928d507hv0i3s.apps.googleusercontent.com';
-let token='',expires=0,events=[],calendar=null,busy=false,generation=0;
+let token='',expires=0,events=[],calendar=null,busy=false,generation=0,authAttempt=0,authTimer=null;
 function mensagem(texto){$('googleMensagem').textContent=texto;}
 function limpar(){events=[];calendar=null;$('googleEventos').replaceChildren();$('googleImportar').disabled=true;$('googleTodos').checked=false;generation++;}
 function conectado(valor){$('googleBuscar').disabled=!valor;$('googleDesconectar').hidden=!valor;$('googleConectar').textContent=valor?'Trocar conta Google':'Conectar com Google';}
-function desconectar(){token='';expires=0;conectado(false);limpar();$('googleCalendario').replaceChildren();mensagem('Conta desconectada deste módulo.');}
-function ocupado(valor){busy=valor;for(const id of ['googleConectar','googleDesconectar','googleCalendario','googleInicio','googleFim','googleBuscar','googleTodos','googleFiltro','googleClientId'])$(id).disabled=valor||(!token&&id==='googleBuscar');$('googleImportar').disabled=valor||!events.length;}
+function desconectar(){authAttempt++;clearTimeout(authTimer);token='';expires=0;ocupado(false);conectado(false);limpar();$('googleCalendario').replaceChildren();mensagem('Conta desconectada deste módulo.');}
+function ocupado(valor){busy=valor;for(const id of ['googleCalendario','googleInicio','googleFim','googleBuscar','googleTodos','googleFiltro','googleClientId'])$(id).disabled=valor||(!token&&id==='googleBuscar');$('googleImportar').disabled=valor||!events.length;}
 async function api(path,params={}){
- if(!token||Date.now()>=expires){desconectar();throw Error('Conecte novamente sua conta Google.');}
- const resposta=await fetch('https://www.googleapis.com/calendar/v3/'+path+'?'+new URLSearchParams(params),{headers:{Authorization:'Bearer '+token}});
- if(resposta.status===401){desconectar();throw Error('Sua sessão expirou. Conecte novamente.');}
- if(!resposta.ok){if(resposta.status===403)throw Error('Acesso negado. Confira se a API Google Calendar está ativada e se sua conta pode ler os detalhes desta agenda.');throw Error('Não foi possível consultar o Google Agenda. Tente novamente.');}
- return resposta.json();
+ const attempt=authAttempt,accessToken=token;
+ if(!accessToken||Date.now()>=expires){desconectar();throw Error('Conecte novamente sua conta Google.');}
+ const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
+ try{
+  const resposta=await fetch('https://www.googleapis.com/calendar/v3/'+path+'?'+new URLSearchParams(params),{headers:{Authorization:'Bearer '+accessToken},signal:controller.signal});
+  if(attempt!==authAttempt)throw Error('Conexão substituída.');
+  if(resposta.status===401){desconectar();throw Error('Sua sessão expirou. Conecte novamente.');}
+  if(!resposta.ok){
+   const detalhe=await resposta.json().catch(()=>({}));
+   const codigo=detalhe.error?.errors?.[0]?.reason||detalhe.error?.status||resposta.status;
+   throw Error('Google Agenda: '+codigo+'. '+(resposta.status===403?'Confira a autorização de leitura da agenda e a ativação da API.':'Não foi possível carregar. Tente conectar novamente.'));
+  }
+  return await resposta.json();
+ }catch(e){if(e.name==='AbortError')throw Error('O Google demorou para responder. Clique em Conectar com Google para tentar novamente.');throw e;}finally{clearTimeout(timeout);}
 }
 async function paginas(path,params){const lista=[];let pageToken;do{const data=await api(path,{...params,...(pageToken?{pageToken}:{})});lista.push(...(data.items||[]));pageToken=data.nextPageToken;}while(pageToken);return lista;}
 $('btnImportarGoogle').onclick=()=>{$('googlePainel').hidden=false;$('googlePainel').scrollIntoView({behavior:'smooth'});};
@@ -26,25 +35,37 @@ $('googleOrigem').textContent=location.origin;
 $('googleConectar').onclick=()=>{
  const clientId=$('googleClientId').value.trim();
  if(!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId)){mensagem('Preencha o ID do cliente OAuth do Google na configuração abaixo.');$('googleConfig').open=true;return;}
- if(!globalThis.google?.accounts?.oauth2){mensagem('A conexão do Google ainda não carregou. Confira sua internet e tente novamente.');return;}
+ if(!globalThis.google?.accounts?.oauth2){mensagem('O serviço de login Google não carregou. Confira a internet e bloqueadores de conteúdo; atualize a página.');return;}
  localStorage.setItem(CONFIG,clientId);
- desconectar();
- const client=google.accounts.oauth2.initTokenClient({client_id:clientId,scope:'https://www.googleapis.com/auth/calendar.readonly',error_callback:()=>{ocupado(false);mensagem('A janela de conexão foi fechada ou bloqueada. Clique em Conectar com Google para tentar novamente.');},callback:async response=>{
-  if(response.error){ocupado(false);mensagem('O Google não autorizou a leitura. Tente conectar novamente.');return;}
+ desconectar();const attempt=authAttempt;
+ $('googleDesconectar').hidden=false;$('googleDesconectar').textContent='Cancelar / desconectar';
+ function falhar(texto){if(attempt!==authAttempt)return;clearTimeout(authTimer);ocupado(false);mensagem(texto);}
+ try{
+ const client=google.accounts.oauth2.initTokenClient({client_id:clientId,scope:'https://www.googleapis.com/auth/calendar.readonly',error_callback:error=>{
+  falhar(error.type==='popup_failed_to_open'?'O navegador bloqueou a janela. Permita pop-ups para este site e clique em Conectar com Google novamente.':'A conexão não terminou ('+(error.type||'erro')+'). Feche a janela anterior e clique em Conectar com Google para escolher outra conta.');
+ },callback:async response=>{
+  if(attempt!==authAttempt)return;
+  clearTimeout(authTimer);
+  if(response.error){falhar('Google: '+response.error+(response.error_description?' — '+response.error_description:'')+'. Confira se o e-mail escolhido está salvo nos usuários de teste.');return;}
+  if(!google.accounts.oauth2.hasGrantedAllScopes(response,'https://www.googleapis.com/auth/calendar.readonly')){falhar('A leitura das agendas não foi autorizada. Conecte novamente e marque a permissão de acesso ao Google Agenda.');return;}
   limpar();token=response.access_token;expires=Date.now()+Math.max(0,Number(response.expires_in)-60)*1000;
+  ocupado(true);mensagem('Autorização recebida. Carregando agendas…');
   try{
    const calendars=await paginas('users/me/calendarList',{minAccessRole:'reader',maxResults:'250',showHidden:'true'});
+   if(attempt!==authAttempt)return;
    $('googleCalendario').replaceChildren(...calendars.map(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.summaryOverride||c.summary||c.id;return o;}));
-   conectado(true);mensagem(calendars.length?'Conta conectada. Escolha a agenda e o período.':'Nenhuma agenda com permissão para ler os detalhes foi encontrada.');
-  }catch(e){mensagem(e.message);}finally{ocupado(false);}
+   conectado(true);mensagem(calendars.length?'Conta conectada. Escolha a agenda e o período.':'Conta autorizada, mas nenhuma agenda com acesso aos detalhes foi encontrada. Compartilhe a agenda com esta conta ou escolha outra conta.');
+  }catch(e){if(attempt===authAttempt)mensagem(e.message);}finally{if(attempt===authAttempt)ocupado(false);}
  }});
- ocupado(true);mensagem('Aguardando autorização do Google…');
- try{client.requestAccessToken({prompt:'select_account'});}catch{ocupado(false);mensagem('Não foi possível abrir a conexão com o Google.');}
+ ocupado(true);mensagem('Escolha sua conta na janela do Google. Para usar outro e-mail, escolha Usar outra conta. Você pode cancelar ou tentar novamente aqui.');
+ authTimer=setTimeout(()=>{if(attempt!==authAttempt)return;desconectar();mensagem('O Google não concluiu a conexão. Feche a janela anterior, permita pop-ups e clique em Conectar com Google para tentar novamente.');},120000);
+ client.requestAccessToken({prompt:'select_account consent'});
+ }catch(e){falhar('Não foi possível iniciar o login Google: '+e.message);}
 };
 $('googleDesconectar').onclick=desconectar;
 for(const id of ['googleCalendario','googleInicio','googleFim'])$(id).onchange=limpar;
 $('googleBuscar').onclick=async()=>{
- if(busy)return;limpar();const run=generation;
+ if(busy)return;limpar();const run=generation,attempt=authAttempt;
  const inicio=$('googleInicio').value,fim=$('googleFim').value,id=$('googleCalendario').value;
  if(!id||!inicio||!fim||inicio>fim){mensagem('Escolha uma agenda e um período válido.');return;}
  const fimExclusivo=new Date(fim+'T00:00:00-03:00');fimExclusivo.setUTCDate(fimExclusivo.getUTCDate()+1);
@@ -53,7 +74,7 @@ $('googleBuscar').onclick=async()=>{
   const lista=await paginas('calendars/'+encodeURIComponent(id)+'/events',{timeMin:inicio+'T00:00:00-03:00',timeMax:fimExclusivo.toISOString(),singleEvents:'true',orderBy:'startTime',showDeleted:'false',maxResults:'250',timeZone:'America/Sao_Paulo'});
   if(run!==generation)return;
   calendar={id,nome:$('googleCalendario').selectedOptions[0].textContent};events=lista.filter(e=>e.status!=='cancelled'&&(e.start?.date||e.start?.dateTime)&&e.eventType!=='workingLocation');desenhar();mensagem(events.length?events.length+' evento(s). Selecione as visitas e confira a empresa antes de importar.':'Nenhum evento encontrado neste período.');
- }catch(e){mensagem(e.message);}finally{ocupado(false);}
+ }catch(e){if(attempt===authAttempt)mensagem(e.message);}finally{if(attempt===authAttempt)ocupado(false);}
 };
 function desenhar(){
  const visitas=ler();$('googleEventos').replaceChildren();
@@ -78,3 +99,4 @@ $('googleImportar').onclick=()=>{
  try{const resultado=CORE.mesclar(ler(),selecionados,calendar.id,calendar.nome);salvar(resultado.visitas);render();desenhar();mensagem(resultado.novas+' visita(s) importada(s) e '+resultado.atualizadas+' atualizada(s). Os registros estão salvos neste navegador.');}catch(e){mensagem(e.message);}
 };
 })();
+
