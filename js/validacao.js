@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let modoFotoAdicional = false;
   let analiseIdAtual = null;
+  window.SSTValidationDraft={snapshot:()=>({modoFotoAdicional,analiseIdAtual}),restore:data=>{modoFotoAdicional=Boolean(data?.modoFotoAdicional);analiseIdAtual=data?.analiseIdAtual||null}};
 
   const contextoSalvo = sessionStorage.getItem("sstVisionNovaAnalise");
   if (contextoSalvo) {
@@ -94,6 +95,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function prepararNovaAnalise(){const empresa=document.getElementById("empresa")?.value.trim()||"",setor=document.getElementById("setor")?.value.trim()||"",tipoAnalise=document.querySelector('input[name="tipoInspecao"]:checked')?.value||"maquina";sessionStorage.setItem("sstVisionNovaAnalise",JSON.stringify({empresa,setor,tipoAnalise}));window.location.reload();}
 
   function prepararFotoAdicional(){
+    window.dispatchEvent(new Event("sstvision:nova-foto"));
     modoFotoAdicional=true; window.sstAnaliseValidada=null; window.sstAnaliseAtual=null; btnMais.hidden=true; btnValidar.hidden=true; btnValidar.disabled=false;btnValidar.textContent="✓ Validar nova foto";btnValidar.classList.remove("validada");
     btnUsarFoto.textContent="Usar foto";btnUsarFoto.classList.remove("btn-primary");btnUsarFoto.classList.add("btn-success");btnUsarFoto.onclick=null;
     if(btnRefazerFoto)btnRefazerFoto.hidden=true;

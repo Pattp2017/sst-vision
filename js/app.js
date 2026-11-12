@@ -191,6 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     fotoSelecionada = arquivo;
+    analiseAtual=null;window.sstAnaliseAtual=null;window.sstManualAchados=[];window.sstAnaliseValidada=null;
 
 
     if (fotoURL) {
@@ -1538,6 +1539,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   // -------------------------------------------------------
+  window.SSTOfflineEditor = {
+    snapshot: () => analiseAtual,
+    restore: async data => {
+      for (const key of ['empresa','setor','equipamento','observacao']) document.getElementById(key).value = data.fields?.[key] || '';
+      const tipo = [...tiposInspecao].find(input => input.value === data.tipo);
+      if (tipo) { tipo.checked = true; tipo.dispatchEvent(new Event('change', {bubbles:true})); }
+      if (data.photo) {
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([data.photo],data.photoName||'evidencia.jpg',{type:data.photo.type||'image/jpeg'}));
+        cameraInput.files = transfer.files;
+        cameraInput.dispatchEvent(new Event('change', {bubbles:true}));
+        try { await fotoPreview.decode(); } catch (_) {}
+      }
+      window.sstAnaliseValidada = data.cloud || null;
+      analiseAtual = data.analise || null;
+      window.sstAnaliseAtual = data.analise || null;
+      if (analiseAtual) (analiseAtual.achados||[]).forEach((a,i)=>{if(!a.excluido)criarMarcador(a,i)});
+      window.SSTManualRestore?.(data.manuais||[]);
+      window.SSTValidationDraft?.restore(data.validation);
+      exibirMensagem('Rascunho recuperado deste aparelho. Revise os dados antes de analisar ou validar.');
+    }
+  };
+
   // SERVICE WORKER
   // -------------------------------------------------------
 

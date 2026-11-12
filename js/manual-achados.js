@@ -120,6 +120,19 @@ document.addEventListener("DOMContentLoaded", () => {
     return String(valor ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   }
 
+  window.SSTManualRestore = lista => {
+    window.sstManualAchados = lista;
+    for (const achado of lista.filter(a=>!a.excluido)) {
+      const marcador=document.createElement('button');marcador.type='button';
+      marcador.className='marcador-risco marcador-manual';marcador.dataset.numero=String(achado.id);
+      marcador.textContent=String(achado.id);marcador.title=achado.titulo;
+      marcador.style.left=`${achado.x??achado.posicao?.x??50}%`;
+      marcador.style.top=`${achado.y??achado.posicao?.y??50}%`;
+      marcador.onclick=e=>{e.preventDefault();e.stopPropagation();abrirDetalheManual(achado,marcador)};
+      preview.append(marcador);
+    }
+  };
+
   foto.addEventListener("dblclick", (e) => {
     if (!foto.src) return;
     const p = coordenadas(e.clientX, e.clientY);
