@@ -1,8 +1,11 @@
 const CACHE_PREFIX = `sst-vision:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v24`;
+const CACHE_NAME = `${CACHE_PREFIX}v25`;
 const ARQUIVOS_CACHE = [
   "./",
   "./index.html",
+  "./visitas.html",
+  "./js/google-agenda-core.js",
+  "./js/google-agenda.js",
   "./analise.html",
   "./analises.html",
   "./analise-detalhe.html",
