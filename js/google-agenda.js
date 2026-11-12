@@ -1,6 +1,7 @@
 (() => {
 const $=id=>document.getElementById(id),CORE=globalThis.SSTGoogleAgenda;
 const CONFIG='sstVision.googleClientId.v1';
+const DEFAULT_CLIENT_ID='293321064147-ike097nmcs3kj9dubuv928d507hv0i3s.apps.googleusercontent.com';
 let token='',expires=0,events=[],calendar=null,busy=false,generation=0;
 function mensagem(texto){$('googleMensagem').textContent=texto;}
 function limpar(){events=[];calendar=null;$('googleEventos').replaceChildren();$('googleImportar').disabled=true;$('googleTodos').checked=false;generation++;}
@@ -17,7 +18,7 @@ async function api(path,params={}){
 async function paginas(path,params){const lista=[];let pageToken;do{const data=await api(path,{...params,...(pageToken?{pageToken}:{})});lista.push(...(data.items||[]));pageToken=data.nextPageToken;}while(pageToken);return lista;}
 $('btnImportarGoogle').onclick=()=>{$('googlePainel').hidden=false;$('googlePainel').scrollIntoView({behavior:'smooth'});};
 $('googleFechar').onclick=()=>{$('googlePainel').hidden=true;};
-$('googleClientId').value=localStorage.getItem(CONFIG)||'';
+$('googleClientId').value=localStorage.getItem(CONFIG)||DEFAULT_CLIENT_ID;
 const hoje=new Date().toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
 $('googleInicio').value=hoje;
 const fim=new Date(hoje+'T12:00:00-03:00');fim.setDate(fim.getDate()+30);$('googleFim').value=fim.toLocaleDateString('en-CA',{timeZone:'America/Sao_Paulo'});
