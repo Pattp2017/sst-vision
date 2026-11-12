@@ -29,13 +29,19 @@ test('recusa relógio anterior à saída e visita cancelada',()=>{
 });
 test('calcula corretamente travessia de meia-noite',()=>assert.equal(C.hh(C.duracao({inicio:'2026-11-13T02:45:00Z',fim:'2026-11-13T03:30:00Z'})),'00:45'));
 test('botões persistem antes de anunciar sucesso e falha de armazenamento mantém os registros',()=>{
- const vm=require('node:vm'),fs=require('node:fs');let visitas=JSON.parse(JSON.stringify(base)),click,fail=false;
- function element(){return {children:[],hidden:true,textContent:'',dataset:{},append(...nodes){this.children.push(...nodes)},replaceChildren(){this.children=[]}};}
+ const vm=require('node:vm'),fs=require('node:fs');let visitas=JSON.parse(JSON.stringify(base)),click,fail=false,aberturas=0;
+ function element(){return {children:[],hidden:true,textContent:'',dataset:{},append(...nodes){this.children.push(...nodes)},replaceChildren(){this.children=[]},click(){aberturas++;},remove(){}};}
  const elements={deslocamentoMensagem:element(),deslocamentoAtivo:element()};
- const context={SSTDeslocamento:C,document:{getElementById:id=>elements[id],querySelectorAll:()=>[],createElement:element,addEventListener:(name,fn)=>{click=fn}},window:{render(){},remover(){},addEventListener(){}},ler:()=>visitas,salvar:v=>{if(fail)throw Error('Sem espaço');visitas=v},render:()=>{},setInterval(){},KEY:'visitas'};
+ const context={SSTDeslocamento:C,document:{body:element(),getElementById:id=>elements[id],querySelectorAll:()=>[],createElement:element,addEventListener:(name,fn)=>{click=fn}},window:{render(){},remover(){},addEventListener(){}},ler:()=>visitas,salvar:v=>{if(fail)throw Error('Sem espaço');visitas=v},render:()=>{},setInterval(){},KEY:'visitas'};
  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../js/deslocamento.js'),'utf8'),context);
- function press(acao){const b={dataset:{visita:'a',deslocamento:acao},disabled:false,isConnected:true,closest:()=>({querySelector:()=>({value:'ida'})})};click({target:{closest:()=>b}});}
- fail=true;press('inicio');assert.equal(C.ativo(visitas),null);assert.match(elements.deslocamentoMensagem.textContent,/Sem espaço/);
- fail=false;press('inicio');assert.equal(C.ativo(visitas).visita.id,'a');assert.equal(elements.deslocamentoAtivo.hidden,false);
- press('fim');assert.equal(C.ativo(visitas),null);assert.equal(elements.deslocamentoAtivo.hidden,true);
+ function press(acao){const b={dataset:{visita:'a',deslocamento:acao,tipo:'ida'},disabled:false,isConnected:true,closest:()=>({querySelector:()=>({value:'ida'})})};click({target:{closest:()=>b}});}
+ fail=true;press('inicio');assert.equal(C.ativo(visitas),null);assert.match(elements.deslocamentoMensagem.textContent,/Sem espaço/);assert.equal(aberturas,0);
+ fail=false;press('inicio');assert.equal(C.ativo(visitas).visita.id,'a');assert.equal(elements.deslocamentoAtivo.hidden,false);assert.equal(aberturas,1);
+ press('fim');assert.equal(C.ativo(visitas),null);assert.equal(elements.deslocamentoAtivo.hidden,true);assert.equal(aberturas,1);
+});
+
+test('obriga sequência ida e volta sem repetir trechos',()=>{
+ assert.throws(()=>iniciar(base,'volta'),/Finalize a ida/);
+ const ida=C.registrar(iniciar(),'a','fim',null,'2026-11-12T11:00:00Z','t');
+ assert.throws(()=>C.registrar(ida,'a','inicio','ida','2026-11-12T12:00:00Z','t2'),/já foi registrado/);
 });

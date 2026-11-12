@@ -9,6 +9,8 @@
    if(emCurso)throw Error('Finalize o deslocamento em andamento antes de iniciar outro.');
    if(visita.status==='Cancelada')throw Error('Não é possível iniciar deslocamento para uma visita cancelada.');
    if(!['ida','volta'].includes(tipo))throw Error('Escolha ida ou volta.');
+   if(trechos.some(t=>t.tipo===tipo))throw Error('Este trecho já foi registrado para a visita.');
+   if(tipo==='volta'&&!trechos.some(t=>t.tipo==='ida'&&t.fim))throw Error('Finalize a ida antes de iniciar a volta.');
    trechos.push({id,tipo,inicio:agora,fim:null});
   }else if(acao==='fim'){
    if(!emCurso||emCurso.visita.id!==visitaId)throw Error('Esta visita não tem deslocamento em andamento.');
