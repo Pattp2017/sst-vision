@@ -1,10 +1,10 @@
 const CACHE_PREFIX = `sst-vision:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v19`;
+const CACHE_NAME = `${CACHE_PREFIX}v20`;
 const ARQUIVOS_CACHE = [
   './', './index.html', './analise.html', './analises.html',
   './analise-detalhe.html', './css/style.css', './js/app.js',
   './js/voice.js', './js/manual-achados.js', './js/validacao.js',
-  './manifest.json', './assets/icons/icon-192.png', './assets/icons/icon-512.png'
+  './css/home.css', './js/home.js', './manifest.json', './assets/icons/icon-192.png', './assets/icons/icon-512.png'
 ];
 const CACHE_URLS = new Set(ARQUIVOS_CACHE.map(path => new URL(path, self.registration.scope).href));
 
