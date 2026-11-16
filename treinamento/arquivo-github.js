@@ -286,7 +286,7 @@
     if(gerarLista&&opcoes.termoImagem!==false)await salvarTermosImagem(lista,raiz);
     if(gerarCert){
       const pastaCertRaiz=await raiz.getDirectoryHandle('03) Certificados',{create:true});
-      const pastaCert=await pastaCertRaiz.getDirectoryHandle(limparNome(nomeTreinamento),{create:true});
+      const pastaCert=await pastaCertRaiz.getDirectoryHandle(limparNome(String(certs.turma.apelido||'').trim()||nomeTreinamento),{create:true});
       let n=0;
       for(const d of certs.documentos){
         progresso('Gerando certificado '+(++n)+' de '+certs.documentos.length+'...');
@@ -306,7 +306,7 @@
       const [lista,certs]=await Promise.all([window.obterListaPresencaGithub(ev),window.obterCertificadosGithub(ev)]);const pastaLista=await raiz.getDirectoryHandle('01) Lista de Presença',{create:true});
       await raiz.getDirectoryHandle('02) Fotos',{create:true});
       const pastaCertRaiz=await raiz.getDirectoryHandle('03) Certificados',{create:true});
-      const pastaCert=await pastaCertRaiz.getDirectoryHandle(limparNome(lista.turma.treinamento||'Treinamento'),{create:true});
+      const pastaCert=await pastaCertRaiz.getDirectoryHandle(limparNome(String(certs.turma.apelido||'').trim()||lista.turma.treinamento||'Treinamento'),{create:true});
       const pastaIT12=lista.ehIT12?await raiz.getDirectoryHandle('04) IT 12',{create:true}):null;
       const nomeTreinamento=lista.turma.treinamento||'Treinamento';
       const statusArquivo=document.getElementById('statusArquivo');
