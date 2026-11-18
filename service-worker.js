@@ -1,5 +1,5 @@
 const CACHE_PREFIX = `sst-vision:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v28`;
+const CACHE_NAME = `${CACHE_PREFIX}v29`;
 const ARQUIVOS_CACHE = [
   "./",
   "./index.html",
@@ -42,6 +42,8 @@ const ARQUIVOS_CACHE = [
   "./checklist/speech.js",
   "./checklist/styles.css",
   "./checklist/inspecao-extintores.html",
+  "./checklist/extintores-sync.js",
+  "./checklist/relatorio-extintores.html",
   "./checklist/cadastro-itens.html",
   "./checklist/photo.js",
   "./checklist/db-v8.js",
