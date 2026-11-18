@@ -109,17 +109,63 @@ if(e.respostas[j]==='NC'){
  const tituloRec=document.createElement('label');tituloRec.textContent='Medida corretiva recomendada';
  const rec=document.createElement('textarea');rec.rows=3;rec.value=det.recomendacao;rec.oninput=()=>det.recomendacao=rec.value;
  div.append(titulo,obs,tituloRec,rec);
- const fotosTitulo=document.createElement('label');fotosTitulo.textContent='Fotos da não conformidade (até 3)';
- const fotosInput=document.createElement('input');fotosInput.type='file';fotosInput.accept='image/*';fotosInput.multiple=true;
+ const fotosTitulo=document.createElement('strong');
+ fotosTitulo.textContent='Fotos da não conformidade (até 3)';
+ const controlesFotos=document.createElement('div');
+ controlesFotos.className='grid';
+ const camera=criarEntradaFoto('Tirar foto', true);
+ const galeria=criarEntradaFoto('Escolher fotos da galeria', false);
+
+ function criarEntradaFoto(texto, usarCamera) {
+  const rotulo=document.createElement('label');
+  rotulo.textContent=texto;
+  const entrada=document.createElement('input');
+  entrada.type='file';
+  entrada.accept='image/*';
+  if(usarCamera) entrada.setAttribute('capture','environment');
+  else entrada.multiple=true;
+  entrada.addEventListener('change',()=>anexarFotos(entrada));
+  rotulo.append(entrada);
+  controlesFotos.append(rotulo);
+  return entrada;
+ }
  const fotosPreview=document.createElement('div');fotosPreview.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px';
  function mostrarFotos(){
   fotosPreview.replaceChildren();
   (det.fotos||[]).forEach((foto,indice)=>{const bloco=document.createElement('div');bloco.style.cssText='width:110px;display:flex;flex-direction:column;gap:4px';const img=document.createElement('img');img.src=foto;img.alt='Foto '+(indice+1);img.style.cssText='width:110px;height:95px;object-fit:contain;border:1px solid #ddd;border-radius:6px';const excluir=document.createElement('button');excluir.type='button';excluir.className='danger';excluir.textContent='Remover';excluir.onclick=()=>{det.fotos.splice(indice,1);mostrarFotos();salvarLocal().catch(() => {})};bloco.append(img,excluir);fotosPreview.append(bloco)})
  }
- fotosInput.onchange=async()=>{const arquivos=Array.from(fotosInput.files||[]);det.fotos=det.fotos||[];if(arquivos.length+det.fotos.length>3){alert('Máximo de 3 fotos por não conformidade.');fotosInput.value='';return}
-  try{const ronda=dados;const convertidas=await Promise.all(arquivos.map(reduzirFoto));if(ronda!==dados)return;if(det.fotos.length+convertidas.length>3)throw Error("Máximo de 3 fotos por não conformidade.");det.fotos.push(...convertidas);mostrarFotos();await salvarLocal()}catch(erro){alert('Falha ao adicionar foto: '+erro.message)}finally{fotosInput.value=''}
- };
- div.append(fotosTitulo,fotosInput,fotosPreview);mostrarFotos();
+ async function anexarFotos(entrada) {
+  const arquivos=Array.from(entrada.files||[]);
+  entrada.value='';
+  if(!arquivos.length)return;
+  if((det.fotos?.length||0)+arquivos.length>3){
+   $('aviso').textContent='Máximo de 3 fotos por não conformidade.';
+   return;
+  }
+  const ronda=dados;
+  camera.disabled=true;
+  galeria.disabled=true;
+  atualizarFotosEmProcessamento(1);
+  $('aviso').textContent='Preparando fotos para salvar neste aparelho…';
+  try {
+   const imagens=await Promise.all(arquivos.map(reduzirFoto));
+   if(ronda!==dados||!ronda.extintores.includes(e))return;
+   det.fotos??=[];
+   if(det.fotos.length+imagens.length>3)throw Error('Máximo de 3 fotos por não conformidade.');
+   det.fotos.push(...imagens);
+   if(fotosPreview.isConnected)mostrarFotos();
+   else render();
+   await salvarLocal();
+  }catch(erro){
+   $('aviso').textContent='Falha ao anexar a foto. '+erro.message;
+  }finally{
+   camera.disabled=false;
+   galeria.disabled=false;
+   atualizarFotosEmProcessamento(-1);
+  }
+ }
+ div.append(fotosTitulo,controlesFotos,fotosPreview);
+ mostrarFotos();
 }
 card.append(div)});
 const lab=document.createElement('label');lab.textContent='Observações';const area=document.createElement('textarea');area.rows=3;area.value=e.observacao||'';area.addEventListener('input',()=>e.observacao=area.value);card.append(lab,area);const remove=document.createElement('button');remove.className='danger';remove.textContent='Excluir extintor';remove.onclick=()=>{if(confirm('Excluir este extintor da ronda?')){dados.extintores.splice(i,1);render();salvarLocal().catch(() => {})}};card.append(remove);lista.append(card)})}
@@ -132,6 +178,14 @@ let conectada = false;
 let sincronizando;
 let agendamento;
 let operacao = false;
+let fotosEmProcessamento = 0;
+
+function atualizarFotosEmProcessamento(variacao) {
+  fotosEmProcessamento += variacao;
+  for (const id of ['voltar-rondas', 'salvar', 'finalizar']) {
+    $(id).disabled = fotosEmProcessamento > 0;
+  }
+}
 const aviso = mensagem => { $('sync-status').textContent = mensagem; };
 
 function solicitarSync() {
