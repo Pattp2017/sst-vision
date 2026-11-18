@@ -167,6 +167,7 @@ document.getElementById('adicionar').onclick=()=>{dados.extintores.push(novo());
 const $ = id => document.getElementById(id);
 let ativa;
 let nuvem = new Map();
+const conflitos = new Set();
 let sincronizando;
 let agendamento;
 let operacao = false;
@@ -268,6 +269,12 @@ async function listar() {
       botao.onclick = () => abrir(r.id, relatorio);
       acoes.append(botao);
     }
+    if (r.pendente && conflitos.has(r.id)) {
+      const botao = document.createElement('button');
+      botao.textContent = 'Salvar como nova inspeção';
+      botao.onclick = () => salvarComoNova(r.id);
+      acoes.append(botao);
+    }
   }
   $('sem-rondas').hidden = Boolean(linhas.rows.length);
 }
@@ -302,6 +309,40 @@ async function abrir(id, relatorio) {
   }
 }
 
+async function salvarComoNova(id) {
+  if (operacao) return;
+  operacao = true;
+  try {
+    const ronda = await Extintores.obter(id);
+    if (ronda?.pendente && await Extintores.separarRonda(ronda)) conflitos.delete(id);
+    await sincronizar();
+    solicitarSync();
+  } catch (erro) {
+    aviso('Não foi possível salvar a inspeção como nova. ' + erro.message);
+  } finally {
+    operacao = false;
+  }
+}
+
+async function enviarRonda(ronda) {
+  try {
+    const base = await Extintores.enviar(ronda);
+    conflitos.delete(ronda.id);
+    return {ronda, base};
+  } catch (erro) {
+    if (!erro.conflito) throw erro;
+    conflitos.add(ronda.id);
+    if (ativa?.id === ronda.id || operacao || !ronda.dados.data_inspecao || !erro.dataRemota ||
+        ronda.dados.data_inspecao === erro.dataRemota) throw erro;
+    operacao = true;
+    const nova = await Extintores.separarRonda(ronda).finally(() => { operacao = false; });
+    if (!nova) throw erro;
+    conflitos.delete(ronda.id);
+    nova.dados.empresa_id = ronda.dados.empresa_id;
+    return {ronda: nova, base: await Extintores.enviar(nova)};
+  }
+}
+
 function sincronizar() {
   if (sincronizando) return sincronizando;
   sincronizando = (async () => {
@@ -319,9 +360,9 @@ function sincronizar() {
           ronda.dados.empresa_id = matches[0].id;
         }
         try {
-          const base = await Extintores.enviar(ronda);
-          await Extintores.confirmar(ronda, base);
-          if (ativa?.id === ronda.id) {
+          const {ronda: enviada, base} = await enviarRonda(ronda);
+          await Extintores.confirmar(enviada, base);
+          if (ativa?.id === enviada.id) {
             ativa.base = base;
             ativa.pendente = ativa.dados.revisao !== ronda.dados.revisao;
             if (!ativa.pendente && !empresaId.value) {
@@ -352,6 +393,7 @@ $('nova-ronda').onclick = () => {
 $('voltar-rondas').onclick = async () => {
   try {
     await mostrarGestao();
+    solicitarSync();
   } catch (erro) {
     if (!ativa) aviso(erro.message);
   }

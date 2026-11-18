@@ -79,6 +79,24 @@ const Extintores = (() => {
     });
   }
 
+  function separarRonda(ronda) {
+    let nova;
+    return operar('readwrite', store => {
+      const pedido = store.get(ronda.id);
+      pedido.onsuccess = () => {
+        const atual = pedido.result;
+        if (!atual?.pendente || atual.dados.revisao !== ronda.dados.revisao) return;
+        const id = crypto.randomUUID();
+        nova = {id, pendente: true, dados: {
+          ...atual.dados, ronda_id: id, revisao: crypto.randomUUID()
+        }};
+        store.put(nova);
+        store.delete(ronda.id);
+      };
+      return pedido;
+    }).then(() => nova);
+  }
+
   async function requisitar(path, options = {}) {
     const response = await fetch(url + path, {
       ...options,
@@ -124,11 +142,7 @@ const Extintores = (() => {
     };
     const filtro = '?id=eq.' + encodeURIComponent(id);
     let rows;
-    let base = ronda.base;
-    if (!base && ronda.legado) {
-      const anterior = await baixar(id);
-      if (anterior && Date.parse(anterior.base) <= Date.parse(ronda.legado)) base = anterior.base;
-    }
+    const base = ronda.base;
     if (base) {
       rows = await api(filtro + '&atualizado_em=eq.' + encodeURIComponent(base) + '&select=atualizado_em', {
         method: 'PATCH', headers: {Prefer: 'return=representation'}, body: JSON.stringify(payload)
@@ -142,8 +156,11 @@ const Extintores = (() => {
     if (rows.length) return rows[0].atualizado_em;
     const atual = await baixar(id);
     if (atual?.dados.revisao === dados.revisao) return atual.base;
-    throw Error('A ronda foi alterada em outro aparelho. Sua edição continua guardada neste aparelho.');
+    if (!atual) throw Error('A ronda não foi encontrada no banco. A cópia local continua guardada.');
+    throw Object.assign(Error('Há uma versão diferente no banco. Sua edição continua guardada neste aparelho.'), {
+      conflito: true, dataRemota: atual.dados.data_inspecao
+    });
   }
 
-  return {obter, gravar, locais, migrar, confirmar, dataLocal, possuiDados, listar, baixar, enviar};
+  return {obter, gravar, locais, migrar, confirmar, separarRonda, dataLocal, possuiDados, listar, baixar, enviar};
 })();
