@@ -13,14 +13,7 @@ td:last-child{white-space:nowrap}td button{font-size:12px}
 #editor{max-width:850px;margin:auto}
 </style></head><body><header><h1>Inspeção de Extintores</h1></header><main><a href="index.html">← Voltar ao menu</a>
 <p id="sync-status" class="summary" role="status"></p>
-<form id="acesso" class="card" hidden>
-  <strong>Conta para sincronização</strong>
-  <div class="grid">
-    <div><label for="email">E-mail</label><input id="email" type="email" autocomplete="username" required></div>
-    <div><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password" required></div>
-  </div>
-  <button id="entrar" type="submit">Entrar</button>
-</form>
+
 <section id="gestao">
   <div class="gestao-topo">
     <h2>Gestão de inspeções de extintores</h2>
@@ -174,7 +167,6 @@ document.getElementById('adicionar').onclick=()=>{dados.extintores.push(novo());
 const $ = id => document.getElementById(id);
 let ativa;
 let nuvem = new Map();
-let conectada = false;
 let sincronizando;
 let agendamento;
 let operacao = false;
@@ -285,7 +277,7 @@ async function abrir(id, relatorio) {
   operacao = true;
   try {
     let ronda = await Extintores.obter(id);
-    if (conectada && navigator.onLine && !ronda?.pendente) {
+    if (navigator.onLine && !ronda?.pendente) {
       try {
         const atual = nuvem.get(id);
         if (!ronda || !atual || atual.atualizado_em !== ronda.base) {
@@ -318,13 +310,6 @@ function sincronizar() {
       return;
     }
     try {
-      const sessao = await Extintores.autenticar();
-      conectada = Boolean(sessao);
-      $('acesso').hidden = conectada;
-      if (!sessao) {
-        aviso('Entre com sua conta do Supabase para sincronizar as inspeções.');
-        return;
-      }
       const falhas = [];
       for (const ronda of await Extintores.locais()) {
         if (!ronda.pendente) continue;
@@ -385,18 +370,6 @@ $('finalizar').onclick = async () => {
     await mostrarGestao();
     await sincronizar();
   } catch { dados.status = 'andamento'; }
-};
-$('acesso').onsubmit = async ev => {
-  ev.preventDefault();
-  if (!navigator.onLine) return aviso('Conecte-se à internet para entrar.');
-  const botao = $('entrar');
-  botao.disabled = true;
-  try {
-    await Extintores.entrar($('email').value.trim(), $('senha').value);
-    $('senha').value = '';
-    await sincronizar();
-  } catch (erro) { aviso('Falha ao entrar. ' + erro.message); }
-  finally { botao.disabled = false; }
 };
 $('busca').oninput = () => listar().catch(erro => aviso(erro.message));
 $('filtro-status').onchange = $('busca').oninput;

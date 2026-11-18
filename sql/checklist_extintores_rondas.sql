@@ -1,4 +1,5 @@
--- Execute no SQL Editor do Supabase antes de ativar a sincronização.
+-- Execute no SQL Editor do Supabase para ativar o histórico compartilhado sem login.
+begin;
 create table if not exists public.checklist_extintores_rondas (
  id uuid primary key default gen_random_uuid(),
  usuario_id uuid not null references auth.users(id) on delete cascade,
@@ -19,16 +20,28 @@ create policy "extintores_insert_own" on public.checklist_extintores_rondas for 
 create policy "extintores_update_own" on public.checklist_extintores_rondas for update to authenticated using (usuario_id=auth.uid()) with check (usuario_id=auth.uid());
 grant select,insert,update on public.checklist_extintores_rondas to authenticated;
 
--- Compartilha as rondas entre contas identificadas, inclusive as antigas.
--- Sessões anônimas antigas continuam limitadas às próprias rondas.
-drop policy if exists extintores_select_equipe on public.checklist_extintores_rondas;
-drop policy if exists extintores_update_equipe on public.checklist_extintores_rondas;
+-- O módulo usa o mesmo acesso anônimo do Checklist geral.
+-- As fotos e rondas são acessíveis com a chave pública do projeto.
+alter table public.checklist_extintores_rondas alter column usuario_id drop not null;
+alter table public.checklist_extintores_rondas drop constraint if exists checklist_extintores_rondas_usuario_id_fkey;
+alter table public.checklist_extintores_rondas add constraint checklist_extintores_rondas_usuario_id_fkey
+  foreign key (usuario_id) references auth.users(id) on delete set null;
 
-create policy extintores_select_equipe on public.checklist_extintores_rondas
-  for select to authenticated
-  using ((select auth.jwt() ->> 'is_anonymous') = 'false');
+revoke all on public.checklist_extintores_rondas from public, anon;
+grant select (id, empresa_id, empresa_nome, dados, data_inspecao, atualizado_em),
+      insert (id, empresa_id, empresa_nome, dados, data_inspecao, atualizado_em),
+      update (empresa_id, empresa_nome, dados, data_inspecao, atualizado_em)
+on public.checklist_extintores_rondas to anon;
 
-create policy extintores_update_equipe on public.checklist_extintores_rondas
-  for update to authenticated
-  using ((select auth.jwt() ->> 'is_anonymous') = 'false')
-  with check ((select auth.jwt() ->> 'is_anonymous') = 'false');
+drop policy if exists extintores_select_compartilhado on public.checklist_extintores_rondas;
+drop policy if exists extintores_insert_compartilhado on public.checklist_extintores_rondas;
+drop policy if exists extintores_update_compartilhado on public.checklist_extintores_rondas;
+create policy extintores_select_compartilhado on public.checklist_extintores_rondas
+  for select to anon using (true);
+create policy extintores_insert_compartilhado on public.checklist_extintores_rondas
+  for insert to anon with check (usuario_id is null);
+create policy extintores_update_compartilhado on public.checklist_extintores_rondas
+  for update to anon using (true) with check (true);
+
+notify pgrst, 'reload schema';
+commit;

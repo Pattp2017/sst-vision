@@ -2,9 +2,7 @@ const Extintores = (() => {
   const url = 'https://uofnninqxnsvaemxpwhh.supabase.co';
   const key = 'sb_publishable_kCX0kt1EFYYL0sR3zQHDzg_6rLVRJQ8';
   const tabela = '/rest/v1/checklist_extintores_rondas';
-  const chaveSessao = 'sst_extintores_sessao_v2';
   let db;
-  let sessao;
 
   function ler(chave) {
     try { return JSON.parse(localStorage.getItem(chave)); } catch { return null; }
@@ -81,12 +79,12 @@ const Extintores = (() => {
     });
   }
 
-  async function requisitar(path, options = {}, token) {
+  async function requisitar(path, options = {}) {
     const response = await fetch(url + path, {
       ...options,
       signal: AbortSignal.timeout(25000),
       headers: {apikey: key, 'Content-Type': 'application/json',
-        ...(token ? {Authorization: 'Bearer ' + token} : {}), ...options.headers}
+        Authorization: 'Bearer ' + key, ...options.headers}
     });
     const result = await response.json().catch(() => null);
     if (!response.ok) {
@@ -95,34 +93,8 @@ const Extintores = (() => {
     return result;
   }
 
-  function guardarSessao(nova) {
-    sessao = nova;
-    if (nova) localStorage.setItem(chaveSessao, JSON.stringify(nova));
-    else localStorage.removeItem(chaveSessao);
-    return sessao;
-  }
-
-  async function entrar(email, password) {
-    const nova = await requisitar('/auth/v1/token?grant_type=password', {method: 'POST', body: JSON.stringify({email, password})});
-    return guardarSessao(nova);
-  }
-
-  async function autenticar() {
-    sessao ??= ler(chaveSessao);
-    if (!sessao?.refresh_token) return null;
-    if (sessao.expires_at * 1000 > Date.now() + 60000) return sessao;
-    try {
-      return guardarSessao(await requisitar('/auth/v1/token?grant_type=refresh_token', {
-        method: 'POST', body: JSON.stringify({refresh_token: sessao.refresh_token})
-      }));
-    } catch (erro) {
-      if (erro.status === 400 || erro.status === 401) return guardarSessao(null);
-      throw erro;
-    }
-  }
-
   function api(path, options) {
-    return requisitar(tabela + path, options, sessao.access_token);
+    return requisitar(tabela + path, options);
   }
 
   async function listar() {
@@ -164,7 +136,7 @@ const Extintores = (() => {
     } else {
       rows = await api('?on_conflict=id&select=atualizado_em', {
         method: 'POST', headers: {Prefer: 'resolution=ignore-duplicates,return=representation'},
-        body: JSON.stringify({...payload, id, usuario_id: sessao.user.id})
+        body: JSON.stringify({...payload, id})
       });
     }
     if (rows.length) return rows[0].atualizado_em;
@@ -173,5 +145,5 @@ const Extintores = (() => {
     throw Error('A ronda foi alterada em outro aparelho. Sua edição continua guardada neste aparelho.');
   }
 
-  return {obter, gravar, locais, migrar, confirmar, dataLocal, possuiDados, entrar, autenticar, listar, baixar, enviar};
+  return {obter, gravar, locais, migrar, confirmar, dataLocal, possuiDados, listar, baixar, enviar};
 })();
