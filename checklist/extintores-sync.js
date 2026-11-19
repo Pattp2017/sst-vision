@@ -115,6 +115,28 @@ const Extintores = (() => {
     return requisitar(tabela + path, options);
   }
 
+  let consultaItens;
+
+  function carregarItens() {
+    const chave = 'sst_extintores_itens_v1';
+    if (!navigator.onLine) return Promise.resolve(ler(chave));
+    consultaItens ??= requisitar('/rest/v1/checklist_itens_mestre?select=id,descricao,medida_corretiva_recomendada&ativo=eq.true&extintor_ordem=not.is.null&order=extintor_ordem.asc,id.asc')
+      .then(itens => {
+        try { localStorage.setItem(chave, JSON.stringify(itens)); } catch {}
+        return itens;
+      }).catch(() => ler(chave)).finally(() => { consultaItens = null; });
+    return consultaItens;
+  }
+
+  function identificarFotos(dados) {
+    for (const extintor of dados.extintores || []) {
+      for (const detalhe of Object.values(extintor.detalhes || {})) {
+        if (!Array.isArray(detalhe?.fotos)) continue;
+        detalhe.foto_ids = detalhe.fotos.map((_, i) => detalhe.foto_ids?.[i] || crypto.randomUUID());
+      }
+    }
+  }
+
   async function listar() {
     const resultado = [];
     const tamanho = 100;
@@ -144,23 +166,29 @@ const Extintores = (() => {
     let rows;
     const base = ronda.base;
     if (base) {
-      rows = await api(filtro + '&atualizado_em=eq.' + encodeURIComponent(base) + '&select=atualizado_em', {
+      rows = await api(filtro + '&atualizado_em=eq.' + encodeURIComponent(base) + '&select=atualizado_em,dados', {
         method: 'PATCH', headers: {Prefer: 'return=representation'}, body: JSON.stringify(payload)
       });
     } else {
-      rows = await api('?on_conflict=id&select=atualizado_em', {
+      rows = await api('?on_conflict=id&select=atualizado_em,dados', {
         method: 'POST', headers: {Prefer: 'resolution=ignore-duplicates,return=representation'},
         body: JSON.stringify({...payload, id})
       });
     }
-    if (rows.length) return rows[0].atualizado_em;
+    if (rows.length) {
+      ronda.dados = rows[0].dados || dados;
+      return rows[0].atualizado_em;
+    }
     const atual = await baixar(id);
-    if (atual?.dados.revisao === dados.revisao) return atual.base;
+    if (atual?.dados.revisao === dados.revisao) {
+      ronda.dados = atual.dados;
+      return atual.base;
+    }
     if (!atual) throw Error('A ronda não foi encontrada no banco. A cópia local continua guardada.');
     throw Object.assign(Error('Há uma versão diferente no banco. Sua edição continua guardada neste aparelho.'), {
       conflito: true, dataRemota: atual.dados.data_inspecao
     });
   }
 
-  return {obter, gravar, locais, migrar, confirmar, separarRonda, dataLocal, possuiDados, listar, baixar, enviar};
+  return {obter, gravar, locais, migrar, confirmar, separarRonda, dataLocal, possuiDados, carregarItens, identificarFotos, listar, baixar, enviar};
 })();

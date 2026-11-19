@@ -88,15 +88,20 @@ document.getElementById('mapa-upload').onchange=async ev=>{
 };
 document.getElementById('remover-mapa').onclick=()=>{delete dados.mapa_imagem;exibirMapa();salvarLocal().catch(() => {})};
 document.getElementById('responsavel').oninput=ev=>{dados.responsavel=ev.target.value};
-function novo(){return {id:crypto.randomUUID(),local:'',tipo:'',capacidade:'',serie:'',manutencao:'',respostas:Object.fromEntries(perguntas.map((_,i)=>[i,'C'])),observacao:''}}
+function itensDaRonda() {
+ return dados.itens_extintores ?? perguntas.map((descricao, i) => ({
+  descricao, medida_corretiva_recomendada: medidasCorretivas[i]
+ }));
+}
+function novo(){return {id:crypto.randomUUID(),local:'',tipo:'',capacidade:'',serie:'',manutencao:'',respostas:Object.fromEntries(itensDaRonda().map((_,i)=>[i,'C'])),observacao:''}}
 function render(){lista.replaceChildren();dados.extintores.forEach((e,i)=>{const card=document.createElement('section');card.className='card';const h=document.createElement('h2');h.textContent='EXT-'+String(i+1).padStart(3,'0');card.append(h);const grid=document.createElement('div');grid.className='grid';card.append(grid);
 function campo(nome,chave,tipo='text'){const wrap=document.createElement('div'),label=document.createElement('label'),input=document.createElement('input');label.textContent=nome;input.type=tipo;input.value=tipo==='month'?(e[chave]||'').slice(0,7):(e[chave]||'');input.addEventListener('input',()=>{e[chave]=input.value});wrap.append(label,input);grid.append(wrap)}
 const localWrap=document.createElement('div'),localLabel=document.createElement('label'),localInput=document.createElement('input'),localLista=document.createElement('div');localLabel.textContent='Local / Setor';localInput.value=e.local||'';localInput.placeholder='Digite para buscar ou informar novo local';localLista.className='sugestoes';localWrap.append(localLabel,localInput,localLista);grid.append(localWrap);function buscarLocal(){e.local=localInput.value;e.local_mestre_id=null;localLista.replaceChildren();const q=normalizar(localInput.value.trim());if(!q)return;locaisCadastrados.filter(l=>normalizar(l.nome).includes(q)).slice(0,15).forEach(l=>{const b=document.createElement('button');b.type='button';b.textContent=l.nome;b.onclick=()=>{localInput.value=l.nome;e.local=l.nome;e.local_mestre_id=l.id;localLista.replaceChildren()};localLista.append(b)})}localInput.addEventListener('input',buscarLocal);campo('Tipo de extintor','tipo');campo('Capacidade','capacidade');campo('Número de série','serie');campo('Mês e ano da manutenção','manutencao','month');
-perguntas.forEach((p,j)=>{e.respostas=e.respostas||{};if(e.respostas[j]===undefined||e.respostas[j]===null||e.respostas[j]==='')e.respostas[j]='C';const div=document.createElement('div');div.className='item';const strong=document.createElement('strong');strong.textContent=(j+1)+'. '+p;div.append(strong);const options=document.createElement('div');options.className='options';['C','NC','P','NA'].forEach(v=>{const lab=document.createElement('label'),radio=document.createElement('input');radio.type='radio';radio.name=e.id+'-'+j;radio.value=v;radio.checked=e.respostas[j]===v;radio.addEventListener('change',()=>{e.respostas[j]=v;if(v==='NC'){e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};if(!e.detalhes[j].recomendacao)e.detalhes[j].recomendacao=medidasCorretivas[j]}render()});lab.append(radio,document.createTextNode(v));options.append(lab)});div.append(options);
+itensDaRonda().forEach(({descricao:p, medida_corretiva_recomendada:medida},j)=>{e.respostas=e.respostas||{};if(e.respostas[j]===undefined||e.respostas[j]===null||e.respostas[j]==='')e.respostas[j]='C';const div=document.createElement('div');div.className='item';const strong=document.createElement('strong');strong.textContent=(j+1)+'. '+p;div.append(strong);const options=document.createElement('div');options.className='options';['C','NC','P','NA'].forEach(v=>{const lab=document.createElement('label'),radio=document.createElement('input');radio.type='radio';radio.name=e.id+'-'+j;radio.value=v;radio.checked=e.respostas[j]===v;radio.addEventListener('change',()=>{e.respostas[j]=v;if(v==='NC'){e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};if(!e.detalhes[j].recomendacao)e.detalhes[j].recomendacao=medida||''}render()});lab.append(radio,document.createTextNode(v));options.append(lab)});div.append(options);
 if(e.respostas[j]==='NC'){
  e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};
  const det=e.detalhes[j];
- if(!det.recomendacao)det.recomendacao=medidasCorretivas[j];
+ if(!det.recomendacao)det.recomendacao=medida||'';
  const titulo=document.createElement('label');titulo.textContent='Constatação da não conformidade';
  const obs=document.createElement('textarea');obs.rows=2;obs.value=det.observacao||'';obs.placeholder='Descreva a irregularidade encontrada';obs.oninput=()=>det.observacao=obs.value;
  const tituloRec=document.createElement('label');tituloRec.textContent='Medida corretiva recomendada';
@@ -125,7 +130,7 @@ if(e.respostas[j]==='NC'){
  const fotosPreview=document.createElement('div');fotosPreview.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:8px';
  function mostrarFotos(){
   fotosPreview.replaceChildren();
-  (det.fotos||[]).forEach((foto,indice)=>{const bloco=document.createElement('div');bloco.style.cssText='width:110px;display:flex;flex-direction:column;gap:4px';const img=document.createElement('img');img.src=foto;img.alt='Foto '+(indice+1);img.style.cssText='width:110px;height:95px;object-fit:contain;border:1px solid #ddd;border-radius:6px';const excluir=document.createElement('button');excluir.type='button';excluir.className='danger';excluir.textContent='Remover';excluir.onclick=()=>{det.fotos.splice(indice,1);mostrarFotos();salvarLocal().catch(() => {})};bloco.append(img,excluir);fotosPreview.append(bloco)})
+  (det.fotos||[]).forEach((foto,indice)=>{const bloco=document.createElement('div');bloco.style.cssText='width:110px;display:flex;flex-direction:column;gap:4px';const img=document.createElement('img');img.src=foto;img.alt='Foto '+(indice+1);img.style.cssText='width:110px;height:95px;object-fit:contain;border:1px solid #ddd;border-radius:6px';const excluir=document.createElement('button');excluir.type='button';excluir.className='danger';excluir.textContent='Remover';excluir.onclick=()=>{det.fotos.splice(indice,1);det.foto_ids?.splice(indice,1);det.foto_codigos?.splice(indice,1);mostrarFotos();salvarLocal().catch(() => {})};bloco.append(img,excluir);fotosPreview.append(bloco)})
  }
  async function anexarFotos(entrada) {
   const arquivos=Array.from(entrada.files||[]);
@@ -145,6 +150,8 @@ if(e.respostas[j]==='NC'){
    if(ronda!==dados||!ronda.extintores.includes(e))return;
    det.fotos??=[];
    if(det.fotos.length+imagens.length>3)throw Error('Máximo de 3 fotos por não conformidade.');
+   det.foto_ids??=det.fotos.map(()=>crypto.randomUUID());
+   det.foto_ids.push(...imagens.map(()=>crypto.randomUUID()));
    det.fotos.push(...imagens);
    if(fotosPreview.isConnected)mostrarFotos();
    else render();
@@ -189,6 +196,7 @@ function solicitarSync() {
 function mostrarEditor(ronda) {
   ativa = ronda;
   dados = ronda.dados;
+  Extintores.identificarFotos(dados);
   empresa.value = dados.empresa || '';
   empresaId.value = dados.empresa_id || '';
   $('responsavel').value = dados.responsavel || '';
@@ -384,10 +392,23 @@ function sincronizar() {
   return sincronizando;
 }
 
-$('nova-ronda').onclick = () => {
+$('nova-ronda').onclick = async () => {
+  const botao = $('nova-ronda');
+  botao.disabled = true;
+  let itens;
+  try {
+    itens = await Extintores.carregarItens();
+    if (itens?.length === 0) {
+      aviso('Ative pelo menos um item de extintores no Cadastro de Itens.');
+      return;
+    }
+  } finally {
+    botao.disabled = false;
+  }
   const id = crypto.randomUUID();
   mostrarEditor({id, pendente: false, dados: {
-    ronda_id: id, empresa: '', empresa_id: '', extintores: [], status: 'andamento', data_inspecao: Extintores.dataLocal()
+    ronda_id: id, empresa: '', empresa_id: '', extintores: [], status: 'andamento', data_inspecao: Extintores.dataLocal(),
+    ...(itens ? {itens_extintores: itens} : {})
   }});
 };
 $('voltar-rondas').onclick = async () => {
@@ -432,6 +453,7 @@ setInterval(() => { if (document.visibilityState === 'visible' && navigator.onLi
 
 carregarEmpresas();
 carregarLocais();
+Extintores.carregarItens();
 Extintores.migrar().then(() => {
   $('nova-ronda').disabled = false;
   return listar();
