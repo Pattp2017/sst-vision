@@ -14,6 +14,7 @@
    trechos.push({id,tipo,inicio:agora,fim:null});
   }else if(acao==='fim'){
    if(!emCurso||emCurso.visita.id!==visitaId)throw Error('Esta visita não tem deslocamento em andamento.');
+   if(tipo&&tipo!==emCurso.trecho.tipo)throw Error('Finalize o trecho que está em andamento.');
    if(instante<new Date(emCurso.trecho.inicio).getTime())throw Error('O horário de chegada não pode ser anterior à saída. Verifique o relógio do dispositivo.');
    trechos=trechos.map(t=>t.id===emCurso.trecho.id?{...t,fim:agora}:t);
   }else throw Error('Ação inválida.');

@@ -14,29 +14,55 @@
    article.querySelector('.deslocamento')?.remove();
    const visita=visitas.find(v=>v.id===article.dataset.visitaId);if(!visita)continue;
    const area=document.createElement('section');area.className='deslocamento';
-   const titulo=document.createElement('strong');titulo.textContent='Deslocamentos';area.append(titulo);
-   const lista=visita.deslocamentos||[],ativoDaVisita=lista.find(t=>!t.fim);
+   const titulo=document.createElement('strong');
+   titulo.textContent='Deslocamento';
+   area.append(titulo);
+   const lista=visita.deslocamentos||[];
+   const ida=lista.find(t=>t.tipo==='ida');
+   const podeIniciar=!emCurso&&visita.status!=='Cancelada';
+   const grupos=document.createElement('div');
+   grupos.className='deslocamento-grupos';
+
+   for(const [tipo,rotulo] of [['ida','Ida'],['volta','Volta']]){
+    const trecho=lista.find(t=>t.tipo===tipo);
+    const grupo=document.createElement('fieldset');
+    grupo.className='deslocamento-trecho';
+    const legenda=document.createElement('legend');
+    legenda.textContent=rotulo;
+
+    const acoes=document.createElement('div');
+    acoes.className='visita-acoes';
+    const inicio=botao('Início','inicio',visita.id,tipo);
+    inicio.setAttribute('aria-label','Registrar saída da '+tipo);
+    inicio.disabled=Boolean(trecho)||!podeIniciar||(tipo==='volta'&&!ida?.fim);
+    const fim=botao('Fim','fim',visita.id,tipo);
+    fim.setAttribute('aria-label','Registrar chegada da '+tipo);
+    fim.disabled=!trecho||Boolean(trecho.fim)||emCurso?.visita.id!==visita.id||emCurso?.trecho.tipo!==tipo;
+    acoes.append(inicio,fim);
+    grupo.append(legenda,acoes);
+
+    if(trecho){
+     const horarios=document.createElement('p');
+     horarios.className='meta';
+     horarios.textContent='Saída: '+formatar(trecho.inicio)+' · '+(trecho.fim?'Chegada: '+formatar(trecho.fim):'Em andamento');
+     grupo.append(horarios);
+    }
+    grupos.append(grupo);
+   }
+   area.append(grupos);
    if(lista.length){
-    const ul=document.createElement('ul');ul.className='meta';
-    for(const t of lista){const li=document.createElement('li');li.textContent=(t.tipo==='volta'?'Volta':'Ida')+' · Saída: '+formatar(t.inicio)+' · '+(t.fim?'Chegada: '+formatar(t.fim):'Em andamento')+' · Duração: '+C.hh(C.duracao(t));ul.append(li);}
-    const total=document.createElement('p');total.className='meta';total.textContent='Tempo total em deslocamento: '+C.hh(lista.reduce((s,t)=>s+C.duracao(t),0));area.append(ul,total);
-   }else{const p=document.createElement('p');p.className='meta';p.textContent='Nenhum deslocamento registrado.';area.append(p);}
-   const acoes=document.createElement('div');acoes.className='visita-acoes';
-   const ida=lista.find(t=>t.tipo==='ida'),volta=lista.find(t=>t.tipo==='volta');
-   const etapas=[
-    ['Iniciar ida','inicio','ida',!ida&&!emCurso&&visita.status!=='Cancelada'],
-    ['Finalizar ida','fim','ida',!!ida&&!ida.fim&&ativoDaVisita?.tipo==='ida'],
-    ['Iniciar volta','inicio','volta',!!ida?.fim&&!volta&&!emCurso&&visita.status!=='Cancelada'],
-    ['Finalizar volta','fim','volta',!!volta&&!volta.fim&&ativoDaVisita?.tipo==='volta']
-   ];
-   for(const [nome,acao,tipo,habilitado] of etapas){const b=botao(nome,acao,visita.id,tipo);b.disabled=!habilitado;acoes.append(b);}
-   area.append(acoes);article.append(area);
+    const total=document.createElement('p');
+    total.className='meta deslocamento-total';
+    total.textContent='Tempo total em deslocamento: '+C.hh(lista.reduce((s,t)=>s+C.duracao(t),0));
+    area.append(total);
+   }
+   article.append(area);
   }
  }
  function mudar(id,acao,tipo){
   try{
    const visitas=ler();const atualizadas=C.registrar(visitas,id,acao,tipo);
-   salvar(atualizadas);render();avisar((acao==='inicio'?'Início':'Fim')+' do deslocamento registrado.');
+   salvar(atualizadas);render();avisar((acao==='inicio'?'Saída':'Chegada')+' da '+tipo+' registrada.');
    if(acao==='inicio'&&tipo==='ida'){
     const link=document.createElement('a');link.href=FORMULARIO;link.target='_blank';link.rel='noopener noreferrer';document.body.append(link);link.click();link.remove();
    }
