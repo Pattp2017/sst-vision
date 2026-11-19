@@ -68,6 +68,10 @@
       <input type="text" id="horario" readonly>
     </div>
 
+    <div class="campo" id="local-agenda-campo" hidden>
+      <label for="local-agenda">Local / Unidade da visita</label>
+      <input id="local-agenda" readonly>
+    </div>
     <div class="acoes">
       <button type="button" class="btn-iniciar" id="btn-iniciar">Iniciar Checklist</button>
     </div>
@@ -75,6 +79,7 @@
   </section>
 </main>
 
+<script src="agenda-checklist.js"></script>
 <script>
 (() => {
   const EMPRESAS_SUPABASE_URL='https://uofnninqxnsvaemxpwhh.supabase.co';
@@ -97,7 +102,19 @@
   let empresasCarregadas=[];
   let modelosCarregados=[];
 
-  document.getElementById('btn-voltar').onclick=()=>location.href='index.html';
+  const visita = AgendaChecklist.visitaDaPagina();
+  const visitaId = new URLSearchParams(location.search).get('visita');
+  document.getElementById('btn-voltar').onclick=()=>location.href=visitaId?'../visitas.html':'index.html';
+  if (visitaId && !visita) {
+    mostrarErro('Visita indisponível neste navegador. Volte à Agenda para iniciar o checklist.');
+    btnIniciar.disabled = true;
+    return;
+  }
+  const vinculo = AgendaChecklist.vinculo(visitaId);
+  if (vinculo) {
+    location.replace(AgendaChecklist.destino(vinculo, '../'));
+    return;
+  }
 
   function checklistHeaders(){
     return {apikey:CHECKLIST_SUPABASE_KEY,Authorization:'Bearer '+CHECKLIST_SUPABASE_KEY,Accept:'application/json','Content-Type':'application/json'};
@@ -131,6 +148,13 @@
       if(!resposta.ok)throw new Error(texto||'Erro ao consultar empresas.');
       empresasCarregadas=texto?JSON.parse(texto):[];
       empresaBusca.placeholder='Digite o nome da empresa...';
+      if (visita && !empresaIdEl.value && empresaBusca.value === visita.empresa) {
+        const correspondencias = empresasCarregadas.filter(e => normalizarTexto(e.nome) === normalizarTexto(visita.empresa));
+        if (correspondencias.length === 1) {
+          empresaBusca.value = correspondencias[0].nome;
+          empresaIdEl.value = correspondencias[0].id;
+        }
+      }
       if(!empresasCarregadas.length)mostrarErro('Nenhuma empresa ativa encontrada.');
     }catch(erro){
       console.error('Erro ao carregar empresas:',erro);
@@ -350,6 +374,11 @@ async function excluirVistoriaIncompleta(vistoriaId) {
 
   btnIniciar.addEventListener('click',async()=>{
     limparMensagem();
+    const vinculoAtual = AgendaChecklist.vinculo(visitaId);
+    if (vinculoAtual) {
+      location.replace(AgendaChecklist.destino(vinculoAtual, '../'));
+      return;
+    }
     const empresaId=empresaIdEl.value;
     const empresaNome=empresaBusca.value.trim();
     const modeloId=modeloEl.value;
@@ -398,6 +427,11 @@ await criarSnapshotVistoria(
   modelo.id
 );
 
+if (visita) {
+  await AgendaChecklist.vincular(visita.id, vistoria);
+  // A vistoria já foi vinculada. Uma falha nos dados auxiliares não pode apagá-la.
+  vistoriaCriadaId = null;
+}
 localStorage.setItem('checklist_vistoria_id', vistoria.id);
 localStorage.setItem('checklist_nova_vistoria', 'true');
 localStorage.setItem('checklist_modelo_id', modelo.id);
@@ -437,6 +471,15 @@ location.href =
 
   preencherDataAtual();
   preencherHorario();
+  if (visita) {
+    empresaBusca.value = visita.empresa || '';
+    dataAuditoriaEl.value = visita.data || dataAuditoriaEl.value;
+    horarioEl.value = visita.hora || horarioEl.value;
+    if (visita.local) {
+      document.getElementById('local-agenda').value = visita.local;
+      document.getElementById('local-agenda-campo').hidden = false;
+    }
+  }
   carregarEmpresas();
   carregarModelos();
 })();

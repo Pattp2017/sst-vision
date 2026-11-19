@@ -89,6 +89,7 @@
     <label>Responsável técnico:<input id="meta-responsavel-tecnico" type="text" placeholder="Responsável técnico" /></label>
     <label>Responsável pela auditoria:<input id="meta-responsavel-auditoria" type="text" placeholder="Responsável pela auditoria" /></label>
     <label>Data da auditoria:<input id="meta-data-auditoria" type="date" /></label>
+    <label id="meta-local-agenda-label" hidden>Local / Unidade da visita:<input id="meta-local-agenda" readonly /></label>
     <label>Horário:<input id="meta-horario" type="text" readonly /></label>
   </div>
 
@@ -121,6 +122,7 @@
   </div>
 
 <script src="offline-cache.js?v=1"></script>
+<script src="agenda-checklist.js"></script>
 <script>
 (function () {
   const SUPABASE_URL = 'https://uofnninqxnsvaemxpwhh.supabase.co';
@@ -166,6 +168,9 @@
 
   function preencherMetadados(vistoria) {
     if (!vistoria) return;
+    const localAgenda = AgendaChecklist.localDaVistoria(vistoria.id);
+    document.getElementById('meta-local-agenda').value = localAgenda;
+    document.getElementById('meta-local-agenda-label').hidden = !localAgenda;
     const campos = {
       'meta-empresa-id': vistoria.empresa_id || '',
       'meta-empresa-nome': vistoria.empresa_nome || '',
@@ -186,6 +191,7 @@
     if (!vistoriaId) return null;
     const dados = await buscarJson(`${SUPABASE_URL}/rest/v1/checklist_vistorias?id=eq.${encodeURIComponent(vistoriaId)}&select=*`);
     const vistoria = dados?.[0] || null;
+    if (vistoria) AgendaChecklist.atualizar(vistoria.id, vistoria.status);
     preencherMetadados(vistoria);
     checklistDocumental = /documental|documentaç|documentos/i.test(vistoria?.modelo_nome || '');
     return vistoria;
@@ -502,7 +508,7 @@
       await carregarModeloChecklist();
       await carregarScript('persist.js?v=14');
       await carregarScript('speech.js?v=13');
-      await carregarScript('db-v8.js?v=19');
+      await carregarScript('db-v8.js?v=20');
       await carregarScript('vistoria-medida-corretiva.js?v=2');
       await carregarScript('photo.js?v=14');
       await carregarScript('gps.js?v=3');

@@ -344,6 +344,7 @@
 
   </main>
 
+<script src="agenda-checklist.js"></script>
 <script>
 
   const SUPABASE_URL =
@@ -371,6 +372,18 @@
   const cardsMobileEl =
     document.getElementById('cards-mobile');
 
+
+  const visitaVinculo = AgendaChecklist.visitaDaPagina();
+  const selecionarVistoria = new URLSearchParams(location.search).has('visita');
+  if (selecionarVistoria && !visitaVinculo) {
+    location.replace('../visitas.html');
+  }
+  if (visitaVinculo) {
+    const orientacao = document.createElement('p');
+    orientacao.textContent = 'Selecione o checklist para a visita de ' + visitaVinculo.empresa + '.';
+    buscaEl.closest('.filtros').before(orientacao);
+    buscaEl.value = visitaVinculo.empresa || '';
+  }
 
   let vistorias = [];
 
@@ -407,7 +420,7 @@
       'click',
       () => {
         window.location.href =
-          'index.html';
+          selecionarVistoria ? '../visitas.html' : 'index.html';
       }
     );
 
@@ -602,6 +615,22 @@
         ? 'card-acoes'
         : 'acoes';
 
+
+    if (visitaVinculo) {
+      const vincular = document.createElement('button');
+      vincular.type = 'button';
+      vincular.className = 'btn btn-continuar';
+      vincular.textContent = 'Vincular a esta visita';
+      vincular.onclick = async () => {
+        if (!confirm('Vincular o checklist de ' + vistoria.empresa_nome + ' a esta visita da Agenda?')) return;
+        try {
+          await AgendaChecklist.vincular(visitaVinculo.id, vistoria);
+          location.href = '../visitas.html';
+        } catch (erro) { alert(erro.message); }
+      };
+      acoes.append(vincular);
+      return acoes;
+    }
 
     const finalizada =
       vistoria.status ===
@@ -1070,6 +1099,7 @@ card.appendChild(
             )
           : [];
       guardarIndiceLocal(vistorias);
+      AgendaChecklist.atualizarLista(vistorias);
 
 
       renderizar();

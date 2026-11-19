@@ -1,5 +1,5 @@
 const CACHE_PREFIX = `sst-vision:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v33`;
+const CACHE_NAME = `${CACHE_PREFIX}v34`;
 const ARQUIVOS_CACHE = [
   "./",
   "./index.html",
@@ -31,6 +31,7 @@ const ARQUIVOS_CACHE = [
   "./js/evidencias.js",
   "./js/app.js",
   "./checklist/novo-checklist.html",
+  "./checklist/agenda-checklist.js",
   "./checklist/mapa-risco.html",
   "./checklist/db.js",
   "./checklist/offline-cache.js",

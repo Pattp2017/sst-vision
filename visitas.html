@@ -65,6 +65,7 @@
 <div id="lista"></div>
 </section>
 </main>
+<script src="./checklist/agenda-checklist.js"></script>
 <script>
 const KEY='sstVision.visitas.v1';let filtro='todas';
 const $=id=>document.getElementById(id);
@@ -75,7 +76,19 @@ function abrir(v=null){$('formPainel').hidden=false;$('formTitulo').textContent=
 function fechar(){$('formPainel').hidden=true;$('formVisita').reset()}
 function dataBR(d){if(!d)return'';return d.split('-').reverse().join('/')}
 function googleUrl(v){if(v.google){try{const u=new URL(v.google.htmlLink);if(u.protocol==='https:'&&['calendar.google.com','www.google.com'].includes(u.hostname))return esc(u.href)}catch{}return 'https://calendar.google.com/calendar/u/0/r'}const ini=new Date(v.data+'T'+v.hora+':00');const fim=new Date(ini.getTime()+Number(v.duracao||120)*60000);const z=n=>String(n).padStart(2,'0');const fmt=d=>d.getFullYear()+z(d.getMonth()+1)+z(d.getDate())+'T'+z(d.getHours())+z(d.getMinutes())+'00';const titulo='Visita SST - '+v.empresa;const detalhes=[v.tipo,v.objetivo,v.acompanhante?'Acompanhante: '+v.acompanhante:'',v.observacoes].filter(Boolean).join('\n');return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(titulo)+'&dates='+fmt(ini)+'/'+fmt(fim)+'&details='+encodeURIComponent(detalhes)+'&location='+encodeURIComponent(v.local||'')}
-function render(){let vs=ler().sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));const hoje=new Date();hoje.setHours(0,0,0,0);if(filtro==='proximas')vs=vs.filter(v=>new Date(v.data+'T00:00:00')>=hoje&&!['Realizada','Relatório concluído','Cancelada'].includes(v.status));if(filtro==='realizadas')vs=vs.filter(v=>['Realizada','Relatório concluído'].includes(v.status));if(!vs.length){$('lista').innerHTML='<div class="vazio">Nenhuma visita encontrada.</div>';return}$('lista').innerHTML=vs.map(v=>'<article class="visita" data-visita-id="'+esc(v.id)+'"><div class="visita-top"><div><h3>'+esc(v.empresa)+'</h3><div class="meta">'+dataBR(v.data)+' às '+esc(v.hora)+(v.local?' · '+esc(v.local):'')+'<br>'+esc(v.tipo)+'</div></div><span class="tag '+v.status.toLowerCase().replaceAll(' ','-').replaceAll('ó','o')+'">'+esc(v.status)+'</span></div><div class="meta visita-objetivo" style="margin-top:9px"><strong>Objetivo:</strong> '+esc(v.objetivo)+'</div><div class="visita-acoes"><button onclick="editar(\''+esc(v.id.replaceAll("'",'%27'))+'\')">Editar</button><a target="_blank" rel="noopener" href="'+googleUrl(v)+'">Google Agenda</a><a class="rv-link" href="./relatorio-visita.html?visita='+encodeURIComponent(v.id)+'">Gerar relatório</a><button onclick="remover(\''+esc(v.id.replaceAll("'",'%27'))+'\')">Excluir</button></div></article>').join('')}
+function acoesChecklist(v) {
+  const registro=AgendaChecklist.vinculo(v.id);
+  if(registro){
+    const rotulo=registro.status==='FINALIZADA'?'Ver checklist':'Continuar checklist';
+    return '<a href="'+esc(AgendaChecklist.destino(registro))+'">'+rotulo+'</a>';
+  }
+  if(v.status==='Cancelada')return '';
+  const id=encodeURIComponent(v.id);
+  return '<a href="./checklist/novo-checklist.html?visita='+id+'">Iniciar checklist</a>'+
+    '<a href="./checklist/checklists.html?visita='+id+'">Vincular checklist existente</a>';
+}
+window.addEventListener('pageshow', () => render());
+function render(){let vs=ler().sort((a,b)=>(a.data+a.hora).localeCompare(b.data+b.hora));const hoje=new Date();hoje.setHours(0,0,0,0);if(filtro==='proximas')vs=vs.filter(v=>new Date(v.data+'T00:00:00')>=hoje&&!['Realizada','Relatório concluído','Cancelada'].includes(v.status));if(filtro==='realizadas')vs=vs.filter(v=>['Realizada','Relatório concluído'].includes(v.status));if(!vs.length){$('lista').innerHTML='<div class="vazio">Nenhuma visita encontrada.</div>';return}$('lista').innerHTML=vs.map(v=>'<article class="visita" data-visita-id="'+esc(v.id)+'"><div class="visita-top"><div><h3>'+esc(v.empresa)+'</h3><div class="meta">'+dataBR(v.data)+' às '+esc(v.hora)+(v.local?' · '+esc(v.local):'')+'<br>'+esc(v.tipo)+'</div></div><span class="tag '+v.status.toLowerCase().replaceAll(' ','-').replaceAll('ó','o')+'">'+esc(v.status)+'</span></div><div class="meta visita-objetivo" style="margin-top:9px"><strong>Objetivo:</strong> '+esc(v.objetivo)+'</div><div class="visita-acoes"><button onclick="editar(\''+esc(v.id.replaceAll("'",'%27'))+'\')">Editar</button><a target="_blank" rel="noopener" href="'+googleUrl(v)+'">Google Agenda</a><a class="rv-link" href="./relatorio-visita.html?visita='+encodeURIComponent(v.id)+'">Gerar relatório</a>'+acoesChecklist(v)+'<button onclick="remover(\''+esc(v.id.replaceAll("'",'%27'))+'\')">Excluir</button></div></article>').join('')}
 window.editar=id=>{const v=ler().find(x=>x.id===id);if(v)abrir(v)}
 window.remover=id=>{if(!confirm('Excluir esta visita?'))return;salvar(ler().filter(x=>x.id!==id));render()}
 $('btnNova').onclick=()=>abrir();$('cancelar').onclick=fechar;

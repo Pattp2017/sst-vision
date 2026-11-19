@@ -266,6 +266,7 @@
       const texto = await resposta.text(); if (!resposta.ok) throw new Error(texto || 'Não foi possível finalizar a vistoria.');
       if (window.VistoriaPersist?.clearCurrent) window.VistoriaPersist.clearCurrent();
       removerPendente(vistoriaId); clearVistoriaId(); localStorage.removeItem('checklist_nova_vistoria');
+      window.AgendaChecklist?.atualizar(vistoriaId, 'FINALIZADA');
       alert('Checklist concluído com sucesso.'); window.location.href = 'index.html'; return true;
     } catch (erro) {
       console.error('Erro ao concluir checklist:', erro);
@@ -286,7 +287,7 @@
       const respostaVistoria = await fetch(`${SUPABASE_URL}/rest/v1/${TABELA_VISTORIAS}?id=eq.${encodeURIComponent(vistoriaId)}&select=id,status`, { method: 'GET', headers: getHeaders() });
       const textoVistoria = await respostaVistoria.text(); if (!respostaVistoria.ok) throw new Error(textoVistoria || 'Erro ao verificar a vistoria.');
       const vistoria = (textoVistoria ? JSON.parse(textoVistoria) : [])[0] || null;
-      if (!vistoria) { if (window.VistoriaPersist?.clearCurrent) window.VistoriaPersist.clearCurrent(); removerPendente(vistoriaId); clearVistoriaId(); window.location.replace('checklists.html'); return true; }
+      if (!vistoria) { window.AgendaChecklist?.atualizar(vistoriaId, null); if (window.VistoriaPersist?.clearCurrent) window.VistoriaPersist.clearCurrent(); removerPendente(vistoriaId); clearVistoriaId(); window.location.replace('checklists.html'); return true; }
       if (vistoria.status !== 'EM_ANDAMENTO') { alert('Este checklist não pode ser excluído porque já foi finalizado.'); return false; }
 
       const respostaItens = await fetch(`${SUPABASE_URL}/rest/v1/${TABELA_ITENS}?vistoria_id=eq.${encodeURIComponent(vistoriaId)}&select=id,status,observacao,responsavel_nc,data_nc,arquivar_foto,foto_path`, { method: 'GET', headers: getHeaders() });
@@ -301,6 +302,7 @@
       if (window.VistoriaPersist?.clearCurrent) window.VistoriaPersist.clearCurrent();
       removerPendente(vistoriaId); clearVistoriaId();
       localStorage.removeItem('checklist_nova_vistoria'); localStorage.removeItem('checklist_modelo_id'); localStorage.removeItem('checklist_modelo_nome');
+      window.AgendaChecklist?.atualizar(vistoriaId, null);
       window.location.replace('checklists.html'); return true;
     } catch (erro) {
       console.error('Erro ao excluir checklist:', erro);

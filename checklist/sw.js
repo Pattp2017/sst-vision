@@ -1,5 +1,5 @@
 const CACHE_PREFIX = `sst-vision-checklist:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v13`;
+const CACHE_NAME = `${CACHE_PREFIX}v14`;
 const ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,7 @@ const ASSETS = [
   './vistoria.html',
   './checklists.html',
   './novo-checklist.html',
+  './agenda-checklist.js',
   './styles.css',
   './offline-cache.js',
   './persist.js',
