@@ -11,6 +11,11 @@ th,td{padding:10px;text-align:left;border-bottom:1px solid #edf0f3}
 th{background:#f8fafc;color:#475569;font-size:12px}
 td:last-child{white-space:nowrap}td button{font-size:12px}
 #editor{max-width:850px;margin:auto}
+.campo-opcoes legend{font-size:13px;font-weight:bold;padding:0;margin:10px 0 5px}
+.campo-opcoes .options label{border:1px solid #cbd5e1;border-radius:8px;padding:6px 8px}
+.campo-opcoes .options label:has(input:checked){background:#fff0df;border-color:#b75c1a}
+.campo-opcoes .options input{margin:0}
+.campo-opcoes>input{margin-top:8px}
 #extintor-abas{display:flex;gap:6px;overflow-x:auto;padding:4px 4px 0;border-bottom:1px solid #e8d7c5}
 #extintor-abas button{flex:0 0 auto;margin:0;border:1px solid #e8d7c5;border-bottom:0;border-radius:8px 8px 0 0;background:#fff;color:#263443}
 #extintor-abas button[aria-selected="true"]{background:#a34c11;color:#fff}
@@ -214,8 +219,47 @@ function renderExtintor() {
   grid.className = 'grid';
   card.append(grid);
 function campo(nome,chave,tipo='text'){const wrap=document.createElement('div'),label=document.createElement('label'),input=document.createElement('input');label.textContent=nome;input.type=tipo;input.value=tipo==='month'?(e[chave]||'').slice(0,7):(e[chave]||'');input.addEventListener('input',()=>{e[chave]=input.value});wrap.append(label,input);grid.append(wrap)}
-const localWrap=document.createElement('div'),localLabel=document.createElement('label'),localInput=document.createElement('input'),localLista=document.createElement('div');localLabel.textContent='Local / Setor';localInput.value=e.local||'';localInput.placeholder='Digite para buscar ou informar novo local';localLista.className='sugestoes';localWrap.append(localLabel,localInput,localLista);grid.append(localWrap);function buscarLocal(){e.local=localInput.value;e.local_mestre_id=null;localLista.replaceChildren();const q=normalizar(localInput.value.trim());if(!q)return;locaisCadastrados.filter(l=>normalizar(l.nome).includes(q)).slice(0,15).forEach(l=>{const b=document.createElement('button');b.type='button';b.textContent=l.nome;b.onclick=()=>{localInput.value=l.nome;e.local=l.nome;e.local_mestre_id=l.id;localLista.replaceChildren()};localLista.append(b)})}localInput.addEventListener('input',buscarLocal);campo('Tipo de extintor','tipo');campo('Capacidade','capacidade');campo('Número de série','serie');campo('Mês e ano da manutenção','manutencao','month');
-itensDaRonda().forEach(({descricao:p, medida_corretiva_recomendada:medida},j)=>{e.respostas=e.respostas||{};if(e.respostas[j]===undefined||e.respostas[j]===null||e.respostas[j]==='')e.respostas[j]='C';const div=document.createElement('div');div.className='item';const strong=document.createElement('strong');strong.textContent=(j+1)+'. '+p;div.append(strong);const options=document.createElement('div');options.className='options';['C','NC','P','NA'].forEach(v=>{const lab=document.createElement('label'),radio=document.createElement('input');radio.type='radio';radio.name=e.id+'-'+j;radio.value=v;radio.checked=e.respostas[j]===v;radio.addEventListener('change',()=>{e.respostas[j]=v;if(v==='NC'){e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};if(!e.detalhes[j].recomendacao)e.detalhes[j].recomendacao=medida||''}renderExtintor();lista.children[i].querySelectorAll('.options')[j].querySelector('input:checked')?.focus({preventScroll:true});salvarLocal().catch(() => {})});lab.append(radio,document.createTextNode(v));options.append(lab)});div.append(options);
+function campoComOpcoes(rotulo, chave, opcoes) {
+  const grupo = document.createElement('fieldset');
+  grupo.className = 'campo-opcoes';
+  const legenda = document.createElement('legend');
+  legenda.textContent = rotulo;
+  const listaOpcoes = document.createElement('div');
+  listaOpcoes.className = 'options';
+  const personalizado = document.createElement('input');
+  personalizado.type = 'text';
+  personalizado.setAttribute('aria-label', 'Outro valor para ' + rotulo.toLowerCase());
+  personalizado.placeholder = chave === 'capacidade' ? 'Informe o valor e a unidade' : 'Informe o tipo';
+  const valor = String(e[chave] ?? '');
+  const padrao = opcoes.find(opcao => normalizar(opcao) === normalizar(valor.trim()));
+  personalizado.value = padrao ? '' : valor;
+  personalizado.hidden = !valor || Boolean(padrao);
+  personalizado.addEventListener('input', () => { e[chave] = personalizado.value; });
+
+  for (const opcao of [...opcoes, 'Outro']) {
+    const label = document.createElement('label');
+    const radio = document.createElement('input');
+    const outro = opcao === 'Outro';
+    radio.type = 'radio';
+    radio.name = e.id + '-campo-' + chave;
+    radio.value = opcao;
+    radio.checked = outro ? Boolean(valor && !padrao) : opcao === padrao;
+    radio.addEventListener('change', () => {
+      personalizado.hidden = !outro;
+      e[chave] = outro ? personalizado.value : opcao;
+      if (outro) personalizado.focus();
+      salvarLocal().catch(() => {});
+    });
+    label.append(radio, document.createTextNode(opcao));
+    listaOpcoes.append(label);
+  }
+
+  grupo.append(legenda, listaOpcoes, personalizado);
+  grid.append(grupo);
+}
+const localWrap=document.createElement('div'),localLabel=document.createElement('label'),localInput=document.createElement('input'),localLista=document.createElement('div');localLabel.textContent='Local / Setor';localInput.value=e.local||'';localInput.placeholder='Digite para buscar ou informar novo local';localLista.className='sugestoes';localWrap.append(localLabel,localInput,localLista);grid.append(localWrap);function buscarLocal(){e.local=localInput.value;e.local_mestre_id=null;localLista.replaceChildren();const q=normalizar(localInput.value.trim());if(!q)return;locaisCadastrados.filter(l=>normalizar(l.nome).includes(q)).slice(0,15).forEach(l=>{const b=document.createElement('button');b.type='button';b.textContent=l.nome;b.onclick=()=>{localInput.value=l.nome;e.local=l.nome;e.local_mestre_id=l.id;localLista.replaceChildren()};localLista.append(b)})}localInput.addEventListener('input',buscarLocal);campoComOpcoes('Tipo de extintor', 'tipo', ['ABC', 'BC', 'CO₂', 'Água', 'Espuma']);
+campoComOpcoes('Capacidade', 'capacidade', ['2 kg', '4 kg', '6 kg', '8 kg', '10 L', '12 kg']);campo('Número de série','serie');campo('Mês e ano da manutenção','manutencao','month');
+itensDaRonda().forEach(({descricao:p, medida_corretiva_recomendada:medida},j)=>{e.respostas=e.respostas||{};if(e.respostas[j]===undefined||e.respostas[j]===null||e.respostas[j]==='')e.respostas[j]='C';const div=document.createElement('div');div.className='item';const strong=document.createElement('strong');strong.textContent=(j+1)+'. '+p;div.append(strong);const options=document.createElement('div');options.className='options';['C','NC','P','NA'].forEach(v=>{const lab=document.createElement('label'),radio=document.createElement('input');radio.type='radio';radio.name=e.id+'-'+j;radio.value=v;radio.checked=e.respostas[j]===v;radio.addEventListener('change',()=>{e.respostas[j]=v;if(v==='NC'){e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};if(!e.detalhes[j].recomendacao)e.detalhes[j].recomendacao=medida||''}renderExtintor();lista.children[i].querySelectorAll('.item .options')[j].querySelector('input:checked')?.focus({preventScroll:true});salvarLocal().catch(() => {})});lab.append(radio,document.createTextNode(v));options.append(lab)});div.append(options);
 if(e.respostas[j]==='NC'){
  e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};
  const det=e.detalhes[j];
