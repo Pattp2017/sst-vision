@@ -29,6 +29,10 @@ function render(){
 }
 const id = new URLSearchParams(location.search).get('id');
 Extintores.obter(id || '').then(ronda => {
+  if (ronda?.dados.status === 'excluida') {
+    el.textContent = 'Esta inspeção foi excluída do histórico.';
+    return;
+  }
   d = ronda?.dados;
   dataEl.value = d?.data_inspecao || Extintores.dataLocal();
   render();

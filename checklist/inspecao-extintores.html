@@ -132,7 +132,7 @@ async function restaurarEditorExtintores() {
   }
   if (!posicao?.ronda) return;
   const ronda = await Extintores.obter(posicao.ronda);
-  if (!ronda) {
+  if (!ronda || ronda.dados.status === 'excluida') {
     guardarPosicaoExtintor();
     return;
   }
@@ -317,6 +317,7 @@ const conflitos = new Set();
 let sincronizando;
 let agendamento;
 let operacao = false;
+let excluindo = false;
 let fotosEmProcessamento = 0;
 
 function atualizarFotosEmProcessamento(variacao) {
@@ -402,6 +403,7 @@ async function listar() {
   linhas.replaceChildren();
   const ordenados = [...registros.values()].sort((a, b) => Date.parse(b.atualizado_em) - Date.parse(a.atualizado_em));
   for (const r of ordenados) {
+    if (r.status === 'excluida' || nuvem.get(r.id)?.status === 'excluida') continue;
     if (!normalizar(r.empresa_nome).includes(busca)) continue;
     const situacao = r.status || 'andamento';
     if (status && situacao !== status) continue;
@@ -421,11 +423,25 @@ async function listar() {
       botao.onclick = () => abrir(r.id, relatorio);
       acoes.append(botao);
     }
-    if (r.pendente && conflitos.has(r.id)) {
+    const excluir = document.createElement('button');
+    excluir.type = 'button';
+    excluir.className = 'danger';
+    excluir.textContent = 'Excluir inspeção';
+    excluir.onclick = () => excluirInspecao(r);
+    const temConflito = r.pendente && conflitos.has(r.id);
+    if (!temConflito) acoes.append(excluir);
+
+    if (temConflito) {
       const botao = document.createElement('button');
       botao.textContent = 'Salvar como nova inspeção';
       botao.onclick = () => salvarComoNova(r.id);
       acoes.append(botao);
+      const descartar = document.createElement('button');
+      descartar.type = 'button';
+      descartar.className = 'secondary';
+      descartar.textContent = 'Descartar cópia local';
+      descartar.onclick = () => excluirInspecao(r, true);
+      acoes.append(descartar);
     }
   }
   $('sem-rondas').hidden = Boolean(linhas.rows.length);
@@ -451,6 +467,9 @@ async function abrir(id, relatorio) {
         aviso('Usando a cópia deste aparelho. ' + erro.message);
       }
     }
+    if (ronda?.dados.status === 'excluida' || nuvem.get(id)?.status === 'excluida') {
+      throw Error('Esta inspeção foi excluída do histórico.');
+    }
     if (!ronda) throw Error('Conecte-se para baixar esta inspeção.');
     if (relatorio) location.href = 'relatorio-extintores.html?id=' + encodeURIComponent(id);
     else mostrarEditor(ronda);
@@ -458,6 +477,56 @@ async function abrir(id, relatorio) {
     aviso(erro.message);
   } finally {
     operacao = false;
+  }
+}
+
+async function excluirInspecao(registro, apenasLocal = false) {
+  if (operacao) return;
+  if (!navigator.onLine) {
+    aviso('Conecte-se para confirmar qual versão da inspeção está no histórico.');
+    return;
+  }
+  const mensagem = apenasLocal
+    ? 'Descartar as alterações desta inspeção guardadas neste aparelho? A versão no histórico será mantida.'
+    : 'Excluir a inspeção de ' + (registro.empresa_nome || 'empresa a identificar') +
+      ' (' + (registro.data_inspecao || 'sem data') + ') do histórico compartilhado?';
+  if (!confirm(mensagem)) return;
+
+  operacao = true;
+  excluindo = true;
+  try {
+    await sincronizando;
+    const remota = await Extintores.baixar(registro.id);
+    if (!apenasLocal && remota && registro.pendente &&
+        remota.dados.data_inspecao !== registro.data_inspecao) {
+      conflitos.add(registro.id);
+      throw Error('As datas da cópia local e da ronda compartilhada são diferentes.');
+    }
+    if (!apenasLocal && remota && remota.dados.status !== 'excluida') {
+      remota.dados.status = 'excluida';
+      remota.dados.revisao = crypto.randomUUID();
+      remota.dados.atualizado_em = new Date(
+        Math.max(Date.now(), Date.parse(remota.base) + 1)
+      ).toISOString();
+      remota.base = await Extintores.enviar(remota);
+    }
+    if (remota) {
+      await Extintores.gravar(remota);
+      nuvem.set(registro.id, {
+        ...registro, status: remota.dados.status, atualizado_em: remota.base
+      });
+    } else {
+      await Extintores.removerLocal(registro.id);
+      nuvem.delete(registro.id);
+    }
+    conflitos.delete(registro.id);
+    aviso(apenasLocal ? 'Cópia local descartada.' : 'Inspeção excluída do histórico.');
+  } catch (erro) {
+    aviso('Não foi possível concluir a exclusão. ' + erro.message);
+  } finally {
+    operacao = false;
+    excluindo = false;
+    await listar();
   }
 }
 
@@ -484,19 +553,13 @@ async function enviarRonda(ronda) {
   } catch (erro) {
     if (!erro.conflito) throw erro;
     conflitos.add(ronda.id);
-    if (ativa?.id === ronda.id || operacao || !ronda.dados.data_inspecao || !erro.dataRemota ||
-        ronda.dados.data_inspecao === erro.dataRemota) throw erro;
-    operacao = true;
-    const nova = await Extintores.separarRonda(ronda).finally(() => { operacao = false; });
-    if (!nova) throw erro;
-    conflitos.delete(ronda.id);
-    nova.dados.empresa_id = ronda.dados.empresa_id;
-    return {ronda: nova, base: await Extintores.enviar(nova)};
+    throw erro;
   }
 }
 
 function sincronizar() {
   if (sincronizando) return sincronizando;
+  if (excluindo) return Promise.resolve();
   sincronizando = (async () => {
     if (!navigator.onLine) {
       aviso('Sem internet. As alterações ficam guardadas neste aparelho.');
@@ -504,7 +567,13 @@ function sincronizar() {
     }
     try {
       const falhas = [];
+      nuvem = new Map((await Extintores.listar()).map(r => [r.id, r]));
+      let enviou = false;
       for (const ronda of await Extintores.locais()) {
+        if (nuvem.get(ronda.id)?.status === 'excluida') {
+          if (!ronda.pendente && ativa?.id !== ronda.id) await Extintores.removerLocal(ronda.id);
+          continue;
+        }
         if (!ronda.pendente) continue;
         if (!ronda.dados.empresa_id) {
           const matches = empresas.filter(e => normalizar(e.nome) === normalizar(ronda.dados.empresa));
@@ -514,6 +583,7 @@ function sincronizar() {
         try {
           const {ronda: enviada, base} = await enviarRonda(ronda);
           await Extintores.confirmar(enviada, base);
+          enviou = true;
           if (ativa?.id === enviada.id) {
             ativa.base = base;
             ativa.pendente = ativa.dados.revisao !== ronda.dados.revisao;
@@ -524,7 +594,7 @@ function sincronizar() {
           }
         } catch (erro) { falhas.push(erro.message); }
       }
-      nuvem = new Map((await Extintores.listar()).map(r => [r.id, r]));
+      if (enviou) nuvem = new Map((await Extintores.listar()).map(r => [r.id, r]));
       aviso(falhas.length ? 'Há rondas pendentes. ' + falhas[0] : 'Histórico sincronizado.');
     } catch (erro) {
       aviso('Sincronização indisponível. ' + erro.message);

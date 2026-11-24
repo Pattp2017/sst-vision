@@ -25,6 +25,7 @@ const Extintores = (() => {
 
   const obter = id => operar('readonly', store => store.get(id));
   const gravar = ronda => operar('readwrite', store => store.put(ronda));
+  const removerLocal = id => operar('readwrite', store => store.delete(id));
   const locais = async () => (await operar('readonly', store => store.getAll())).filter(r => r.dados && r.id !== 'atual');
   const dataLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const possuiDados = d => Boolean(d?.empresa || d?.extintores?.length || d?.responsavel || d?.mapa_imagem || d?.proxima_visita);
@@ -185,10 +186,13 @@ const Extintores = (() => {
       return atual.base;
     }
     if (!atual) throw Error('A ronda não foi encontrada no banco. A cópia local continua guardada.');
+    if (atual.dados.status === 'excluida') {
+      throw Object.assign(Error('Esta inspeção foi excluída do histórico compartilhado.'), {excluida: true});
+    }
     throw Object.assign(Error('Há uma versão diferente no banco. Sua edição continua guardada neste aparelho.'), {
-      conflito: true, dataRemota: atual.dados.data_inspecao
+      conflito: true
     });
   }
 
-  return {obter, gravar, locais, migrar, confirmar, separarRonda, dataLocal, possuiDados, carregarItens, identificarFotos, listar, baixar, enviar};
+  return {obter, gravar, removerLocal, locais, migrar, confirmar, separarRonda, dataLocal, possuiDados, carregarItens, identificarFotos, listar, baixar, enviar};
 })();
