@@ -39,6 +39,8 @@ td:last-child{white-space:nowrap}td button{font-size:12px}
 </section>
 <section id="editor" hidden>
   <button id="voltar-rondas" type="button" class="secondary">← Voltar às inspeções</button>
+  <button id="salvar-geral-topo" type="button" class="secondary">Salvar geral</button>
+  <span id="aviso-salvar-topo" role="status"></span>
   <fieldset id="dados-gerais">
 <div class="card"><label for="empresa">Empresa / Fazenda</label><input id="empresa" placeholder="Digite para buscar a empresa" autocomplete="off"><input id="empresa-id" type="hidden"><div id="empresa-sugestoes" class="sugestoes"></div><label for="responsavel">Responsável pela inspeção</label><input id="responsavel" placeholder="Nome do responsável" autocomplete="off"><label for="data-inspecao">Data da inspeção</label><input id="data-inspecao" type="date"><label for="proxima-visita">Próxima visita</label><input id="proxima-visita" type="date"><label for="mapa-upload">Mapa / planta de localização dos extintores</label><input id="mapa-upload" type="file" accept="image/*"><div id="mapa-preview"></div><button id="remover-mapa" type="button" class="secondary" style="display:none">Remover mapa</button><p class="summary">Os locais são cadastrados conforme os extintores forem encontrados. A data da manutenção é individual.</p></div>
   </fieldset>
@@ -46,10 +48,10 @@ td:last-child{white-space:nowrap}td button{font-size:12px}
   <fieldset id="campos">
     <div id="lista"></div>
     <button id="adicionar" type="button">+ Adicionar extintor</button>
-    <button id="salvar" type="button" class="secondary">Salvar ronda</button>
+    <button id="salvar" type="button" class="secondary">Salvar geral</button>
     <button id="finalizar" type="button">Finalizar inspeção</button>
   </fieldset>
-  <p id="aviso" role="status"></p>
+  <p id="aviso" role="status" aria-live="polite"></p>
 </section>
 </main>
 <script src="extintores-sync.js"></script>
@@ -213,7 +215,7 @@ function renderExtintor() {
   card.append(grid);
 function campo(nome,chave,tipo='text'){const wrap=document.createElement('div'),label=document.createElement('label'),input=document.createElement('input');label.textContent=nome;input.type=tipo;input.value=tipo==='month'?(e[chave]||'').slice(0,7):(e[chave]||'');input.addEventListener('input',()=>{e[chave]=input.value});wrap.append(label,input);grid.append(wrap)}
 const localWrap=document.createElement('div'),localLabel=document.createElement('label'),localInput=document.createElement('input'),localLista=document.createElement('div');localLabel.textContent='Local / Setor';localInput.value=e.local||'';localInput.placeholder='Digite para buscar ou informar novo local';localLista.className='sugestoes';localWrap.append(localLabel,localInput,localLista);grid.append(localWrap);function buscarLocal(){e.local=localInput.value;e.local_mestre_id=null;localLista.replaceChildren();const q=normalizar(localInput.value.trim());if(!q)return;locaisCadastrados.filter(l=>normalizar(l.nome).includes(q)).slice(0,15).forEach(l=>{const b=document.createElement('button');b.type='button';b.textContent=l.nome;b.onclick=()=>{localInput.value=l.nome;e.local=l.nome;e.local_mestre_id=l.id;localLista.replaceChildren()};localLista.append(b)})}localInput.addEventListener('input',buscarLocal);campo('Tipo de extintor','tipo');campo('Capacidade','capacidade');campo('Número de série','serie');campo('Mês e ano da manutenção','manutencao','month');
-itensDaRonda().forEach(({descricao:p, medida_corretiva_recomendada:medida},j)=>{e.respostas=e.respostas||{};if(e.respostas[j]===undefined||e.respostas[j]===null||e.respostas[j]==='')e.respostas[j]='C';const div=document.createElement('div');div.className='item';const strong=document.createElement('strong');strong.textContent=(j+1)+'. '+p;div.append(strong);const options=document.createElement('div');options.className='options';['C','NC','P','NA'].forEach(v=>{const lab=document.createElement('label'),radio=document.createElement('input');radio.type='radio';radio.name=e.id+'-'+j;radio.value=v;radio.checked=e.respostas[j]===v;radio.addEventListener('change',()=>{e.respostas[j]=v;if(v==='NC'){e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};if(!e.detalhes[j].recomendacao)e.detalhes[j].recomendacao=medida||''}renderExtintor();lista.children[i].querySelectorAll('.options')[j].querySelector('input:checked')?.focus({preventScroll:true})});lab.append(radio,document.createTextNode(v));options.append(lab)});div.append(options);
+itensDaRonda().forEach(({descricao:p, medida_corretiva_recomendada:medida},j)=>{e.respostas=e.respostas||{};if(e.respostas[j]===undefined||e.respostas[j]===null||e.respostas[j]==='')e.respostas[j]='C';const div=document.createElement('div');div.className='item';const strong=document.createElement('strong');strong.textContent=(j+1)+'. '+p;div.append(strong);const options=document.createElement('div');options.className='options';['C','NC','P','NA'].forEach(v=>{const lab=document.createElement('label'),radio=document.createElement('input');radio.type='radio';radio.name=e.id+'-'+j;radio.value=v;radio.checked=e.respostas[j]===v;radio.addEventListener('change',()=>{e.respostas[j]=v;if(v==='NC'){e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};if(!e.detalhes[j].recomendacao)e.detalhes[j].recomendacao=medida||''}renderExtintor();lista.children[i].querySelectorAll('.options')[j].querySelector('input:checked')?.focus({preventScroll:true});salvarLocal().catch(() => {})});lab.append(radio,document.createTextNode(v));options.append(lab)});div.append(options);
 if(e.respostas[j]==='NC'){
  e.detalhes=e.detalhes||{};e.detalhes[j]=e.detalhes[j]||{};
  const det=e.detalhes[j];
@@ -319,12 +321,18 @@ let agendamento;
 let operacao = false;
 let excluindo = false;
 let fotosEmProcessamento = 0;
+let salvandoRonda = false;
+
+function atualizarBotoesEditor() {
+  const ocupado = fotosEmProcessamento > 0 || salvandoRonda;
+  for (const id of ['voltar-rondas', 'finalizar', 'salvar', 'salvar-geral-topo']) {
+    $(id).disabled = ocupado;
+  }
+}
 
 function atualizarFotosEmProcessamento(variacao) {
   fotosEmProcessamento += variacao;
-  for (const id of ['voltar-rondas', 'salvar', 'finalizar']) {
-    $(id).disabled = fotosEmProcessamento > 0;
-  }
+  atualizarBotoesEditor();
 }
 const aviso = mensagem => { $('sync-status').textContent = mensagem; };
 
@@ -347,12 +355,15 @@ function mostrarEditor(ronda, extintorId) {
   $('proxima-visita').value = dados.proxima_visita || '';
   sugestoes.replaceChildren();
   $('aviso').textContent = '';
+  $('aviso-salvar-topo').textContent = '';
   $('gestao').hidden = true;
   $('editor').hidden = false;
   const fechada = dados.status === 'finalizada';
   $('dados-gerais').disabled = fechada;
   $('campos').disabled = fechada;
   $('finalizar').hidden = fechada;
+  $('salvar-geral-topo').hidden = fechada;
+  $('salvar').hidden = fechada;
   exibirMapa();
   render();
 }
@@ -633,9 +644,41 @@ $('voltar-rondas').onclick = async () => {
     if (!ativa) aviso(erro.message);
   }
 };
-$('salvar').onclick = async () => {
-  try { await salvarLocal(); await sincronizar(); } catch {}
-};
+async function salvarGeral(evento) {
+  const retorno = evento.currentTarget.id === 'salvar-geral-topo' ? $('aviso-salvar-topo') : $('aviso');
+  $('aviso-salvar-topo').textContent = '';
+  if (!ativa || $('campos').disabled || salvandoRonda || fotosEmProcessamento) return;
+  if (!Extintores.possuiDados(coletar())) {
+    retorno.textContent = 'Preencha os dados da inspeção antes de salvar.';
+    return;
+  }
+  salvandoRonda = true;
+  atualizarBotoesEditor();
+  try {
+    await sincronizando;
+    await salvarLocal();
+    retorno.textContent = 'Inspeção salva neste aparelho. Sincronizando histórico…';
+    await sincronizar();
+    if (!ativa.pendente) {
+      retorno.textContent = 'Inspeção salva e sincronizada no histórico compartilhado.';
+    } else if (!navigator.onLine) {
+      retorno.textContent = 'Inspeção salva neste aparelho. A sincronização será retomada quando houver internet.';
+    } else if (!dados.empresa_id) {
+      retorno.textContent = 'Inspeção salva neste aparelho. Selecione uma empresa na lista para sincronizar.';
+    } else if (conflitos.has(ativa.id)) {
+      retorno.textContent = 'Inspeção salva neste aparelho. Há uma versão diferente no histórico. Volte à lista para conferir as opções.';
+    } else {
+      retorno.textContent = 'Inspeção salva neste aparelho. A sincronização continua pendente. ' + $('sync-status').textContent;
+    }
+  } catch {
+    if (retorno !== $('aviso')) retorno.textContent = $('aviso').textContent;
+  } finally {
+    salvandoRonda = false;
+    atualizarBotoesEditor();
+  }
+}
+
+$('salvar').onclick = $('salvar-geral-topo').onclick = salvarGeral;
 $('finalizar').onclick = async () => {
   if (!empresa.value.trim() || !dados.extintores.length) {
     $('aviso').textContent = 'Informe a empresa e adicione um extintor para finalizar.';
@@ -652,10 +695,10 @@ $('busca').oninput = () => listar().catch(erro => aviso(erro.message));
 $('filtro-status').onchange = $('busca').oninput;
 $('atualizar').onclick = sincronizar;
 $('editor').addEventListener('input', ev => {
-  if (ev.target.type !== 'file') salvarLocal().catch(() => {});
+  if (ev.target.type !== 'file' && ev.target.type !== 'radio') salvarLocal().catch(() => {});
 });
 $('editor').addEventListener('change', ev => {
-  if (ev.target.type !== 'file') salvarLocal().catch(() => {});
+  if (ev.target.type !== 'file' && ev.target.type !== 'radio') salvarLocal().catch(() => {});
 });
 window.addEventListener('online', () => { carregarEmpresas(); carregarLocais(); sincronizar(); });
 window.addEventListener('offline', () => aviso('Sem internet. As alterações ficam guardadas neste aparelho.'));
