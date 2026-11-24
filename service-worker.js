@@ -1,5 +1,5 @@
 const CACHE_PREFIX = `sst-vision:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v39`;
+const CACHE_NAME = `${CACHE_PREFIX}v40`;
 const ARQUIVOS_CACHE = [
   "./",
   "./index.html",
