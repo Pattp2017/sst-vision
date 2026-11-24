@@ -53,6 +53,10 @@ td:last-child{white-space:nowrap}td button{font-size:12px}
   <fieldset id="campos">
     <div id="lista"></div>
     <button id="adicionar" type="button">+ Adicionar extintor</button>
+    <section class="card">
+      <label for="observacao-geral">Observação geral da inspeção</label>
+      <textarea id="observacao-geral" rows="4"></textarea>
+    </section>
     <button id="salvar" type="button" class="secondary">Salvar geral</button>
     <button id="finalizar" type="button">Finalizar inspeção</button>
   </fieldset>
@@ -349,7 +353,7 @@ const lab=document.createElement('label');lab.textContent='Observações';const 
   };
   card.append(remove);
 }
-function coletar(){dados.proxima_visita=document.getElementById('proxima-visita').value;dados.responsavel=document.getElementById('responsavel').value.trim();dados.empresa=empresa.value.trim();dados.empresa_id=empresaId.value;return dados}
+function coletar(){dados.observacao_geral=$('observacao-geral').value.trim();dados.proxima_visita=document.getElementById('proxima-visita').value;dados.responsavel=document.getElementById('responsavel').value.trim();dados.empresa=empresa.value.trim();dados.empresa_id=empresaId.value;return dados}
 document.getElementById('adicionar').onclick = () => {
   dados.extintores.push(novo());
   indiceExtintor = dados.extintores.length - 1;
@@ -396,6 +400,7 @@ function mostrarEditor(ronda, extintorId) {
   empresaId.value = dados.empresa_id || '';
   $('responsavel').value = dados.responsavel || '';
   $('data-inspecao').value = dados.data_inspecao;
+  $('observacao-geral').value = dados.observacao_geral || '';
   $('proxima-visita').value = dados.proxima_visita || '';
   sugestoes.replaceChildren();
   $('aviso').textContent = '';

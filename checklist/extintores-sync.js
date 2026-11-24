@@ -28,7 +28,7 @@ const Extintores = (() => {
   const removerLocal = id => operar('readwrite', store => store.delete(id));
   const locais = async () => (await operar('readonly', store => store.getAll())).filter(r => r.dados && r.id !== 'atual');
   const dataLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  const possuiDados = d => Boolean(d?.empresa || d?.extintores?.length || d?.responsavel || d?.mapa_imagem || d?.proxima_visita);
+  const possuiDados = d => Boolean(d?.empresa || d?.extintores?.length || d?.responsavel || d?.mapa_imagem || d?.proxima_visita || d?.observacao_geral);
 
   async function migrar() {
     if (await obter('migrado-v2')) return;
