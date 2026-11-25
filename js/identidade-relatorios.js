@@ -106,6 +106,52 @@
     </div>`;
   }
 
+  async function imagemCabecalho(doc, html) {
+    const modelo = doc.createElement('template');
+    modelo.innerHTML = html;
+    const tela = doc.createElement('canvas');
+    const largura = tela.width = 687;
+    tela.height = 95;
+    const ctx = tela.getContext('2d');
+    ctx.fillStyle = '#111';
+    ctx.strokeStyle = '#111';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const tabela = modelo.content.querySelector('table');
+    if (tabela) {
+      const linhas = [...tabela.rows];
+      for (const [indice, linha] of linhas.entries()) {
+        const topo = [1, 38, 60][indice];
+        const altura = [37, 22, 34][indice];
+        const coluna = (largura - 2) / linha.cells.length;
+        ctx.font = indice === 0 ? 'bold 16px Arial' : indice === 1 ? 'bold 11px Arial' : '11px Arial';
+        for (const [posicao, celula] of [...linha.cells].entries()) {
+          const esquerda = 1 + posicao * coluna;
+          ctx.strokeRect(esquerda, topo, coluna, altura);
+          ctx.fillText(celula.textContent, esquerda + coluna / 2, topo + altura / 2, coluna - 8);
+        }
+      }
+    } else {
+      const url = modelo.content.querySelector('img')?.src;
+      const dados = await prepararRodape(url);
+      if (dados) {
+        const arte = new Image();
+        arte.src = dados;
+        try {
+          await arte.decode();
+          const fator = Math.min(1, 54 / arte.height);
+          ctx.drawImage(arte, (largura - arte.width * fator) / 2, 0, arte.width * fator, arte.height * fator);
+        } catch {}
+      }
+      const [titulo, data] = modelo.content.firstElementChild.querySelectorAll('div');
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText(titulo.textContent, largura / 2, 66, largura - 8);
+      ctx.font = '12px Arial';
+      ctx.fillText(data.textContent, largura / 2, 85, largura - 8);
+    }
+    return tela.toDataURL('image/png');
+  }
+
   function inserir(doc, identidade, {previa, rodapePadrao, tipo, titulo = doc.title} = {}) {
     const m = marcas(identidade);
     const cabecalho = cabecalhoHTML(identidade, tipo, titulo);
@@ -123,16 +169,16 @@
         print-color-adjust:exact; -webkit-print-color-adjust:exact;
         ${m.rodape && !imagemImpressao ? `background:url(${cssString(m.rodape)}) center / contain no-repeat;` : ''}
       }` : '';
-    const css = imagemImpressao => `
+    const css = (imagemImpressao, topo) => `
       .sst-timbre-impressao { display:none }
       .sst-timbre-previa { display:block; width:100%; max-height:17mm; object-fit:contain }
       .sst-marca-previa { position:absolute; top:50%; max-width:42%; max-height:110mm;
         transform:translate(-50%, -50%); pointer-events:none; z-index:0 }
       @media print {
         @page { margin:${cabecalho ? 37 : m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
+          ${topo ? `@top-center { content:url(${cssString(topo)}); width:181.8mm; vertical-align:top; padding-top:3mm; }` : ''}
           ${cabecalho ? '@top-right { content: "Página " counter(page) "/" counter(pages); vertical-align:bottom; padding-bottom:2mm; font:9pt Arial; }' : ''}
         }
-        .sst-cab-modelo { top:-33mm; left:0; right:0; max-height:26mm; overflow:hidden; z-index:101 }
         .sst-cab-modelo-previa { display:none!important }
         .sst-timbre-previa,.sst-marca-previa { display:none!important }
         .sst-timbre-impressao { display:block; position:fixed; pointer-events:none }
@@ -144,12 +190,16 @@
       }`;
     estilo.textContent = css('');
     doc.head.append(estilo);
-    const preparo = prepararRodape(m.rodape).then(async dados => {
-      if (!dados || !estilo.isConnected) return;
-      const preCarga = new Image();
-      preCarga.src = dados;
-      await preCarga.decode().catch(() => {});
-      estilo.textContent = css(dados);
+    const preparo = Promise.all([
+      prepararRodape(m.rodape),
+      cabecalho ? imagemCabecalho(doc, cabecalho).catch(() => '') : ''
+    ]).then(async ([rodape, topo]) => {
+      await Promise.allSettled([rodape, topo].filter(Boolean).map(dados => {
+        const img = new Image();
+        img.src = dados;
+        return img.decode();
+      }));
+      if (estilo.isConnected) estilo.textContent = css(rodape, topo);
     });
     const imagens = [];
     function adicionar(pai, classe, url, texto) {
@@ -167,7 +217,6 @@
       return elemento;
     }
     if (cabecalho) {
-      adicionar(doc.body, 'sst-timbre-impressao sst-cab-modelo', '').innerHTML = cabecalho;
       if (previa) adicionar(previa, 'sst-cab-modelo-previa', '').innerHTML = cabecalho;
     }
     if (!cabecalho && m.cabecalho) adicionar(doc.body, 'sst-timbre-impressao sst-timbre-topo', m.cabecalho);
