@@ -1,12 +1,14 @@
 (() => {
-  if (window.self !== window.top) return;
+  const params = new URLSearchParams(location.search);
+  // The central catalog already supplies navigation around its embedded forms.
+  if (window.self !== window.top && params.get('central') === '1') return;
 
   const root = new URL('../', document.currentScript.src);
   const url = path => new URL(path, root).href;
   const current = location.pathname.slice(root.pathname.length);
   const home = current === '' || current === 'index.html';
   const cadastro = current.startsWith('cadastros/');
-  const group = new URLSearchParams(location.search).get('grupo') || 'todos';
+  const group = params.get('grupo') || 'todos';
   const modules = [
     ['Visitas SST', 'visitas.html', /^(visitas|minha-jornada|relatorio-visita)\.html$/],
     ['Análise de risco', 'analises.html', /^anali[sz]/],
