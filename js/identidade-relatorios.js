@@ -211,6 +211,7 @@
         print-color-adjust:exact; -webkit-print-color-adjust:exact;
         ${m.rodape && !imagemImpressao ? `background:url(${cssString(m.rodape)}) center / contain no-repeat;` : ''}
       }` : '';
+    const margemSuperior = cabecalho ? 37 : m.cabecalho ? 24 : 14;
     const css = (imagemImpressao, topo) => `
       .sst-timbre-impressao { display:none }
       .sst-timbre-previa { display:block; width:100%; max-height:17mm; object-fit:contain }
@@ -219,7 +220,7 @@
       .sst-marca-previa.sst-marca-folha { left:50%!important; top:0; width:100%; max-width:100%;
         height:auto; max-height:none; transform:translateX(-50%) }
       @media print {
-        @page { margin:${cabecalho ? 37 : m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
+        @page { margin:${margemSuperior}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
           ${topo ? `@top-center { content:url(${cssString(topo)}); width:181.8mm; vertical-align:top; padding-top:3mm; }` : ''}
           ${topo ? paginacao : ''}
         }
@@ -233,8 +234,11 @@
         .sst-timbre-marca { top:66mm; width:75mm; height:108mm;
           object-fit:contain; transform:translateX(-50%); z-index:200;
           print-color-adjust:exact; -webkit-print-color-adjust:exact }
-        .sst-timbre-marca.sst-marca-folha { left:0!important; top:0; width:100%; height:225mm;
-          transform:none }
+        .sst-timbre-marca.sst-marca-folha {
+          left:-14mm!important; top:-${margemSuperior}mm;
+          width:210mm; height:297mm; max-width:none; max-height:none;
+          object-fit:fill; transform:none
+        }
       }`;
     estilo.textContent = css('');
     doc.head.append(estilo);

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = `sst-vision:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v52`;
+const CACHE_NAME = `${CACHE_PREFIX}v53`;
 const ARQUIVOS_CACHE = [
   "./js/identidade-relatorios.js",
   "./treinamento/supabase-config.js",
