@@ -43,11 +43,11 @@
       <div class="label">ESPAÇO DE TRABALHO</div>
       ${link('Visão geral', 'index.html#inicio', home && (!location.hash || location.hash === '#inicio'), icons[1])}
       ${branch('modules', 'Módulos', icons[2], !home && !cadastro)}
-      ${link('Ações rápidas', 'index.html#acoes', home && location.hash === '#acoes', icons[3])}
-      ${branch('registers', 'Cadastros', icons[4], cadastro)}
       <div class="tree" id="modules" ${home || cadastro ? 'hidden' : ''}>
         ${modules.map(([name, path, matches]) => link(name, path, matches.test(current))).join('')}
       </div>
+      ${link('Ações rápidas', 'index.html#acoes', home && location.hash === '#acoes', icons[3])}
+      ${branch('registers', 'Cadastros', icons[4], cadastro)}
       <div class="tree" id="registers" ${cadastro ? '' : 'hidden'}>
         ${groups.map(([name, id]) => link(name, 'cadastros/index.html?grupo=' + id, cadastro && group === id)).join('')}
       </div>
