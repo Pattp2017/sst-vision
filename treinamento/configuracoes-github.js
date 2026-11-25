@@ -71,8 +71,9 @@
           ${campo('cfgCor','Cor principal',c?.cor_principal||'#0b8f43','color')}
           <label class="full">Endereço<input id="cfgEndereco" readonly value="${esc(c?.endereco||'')}"></label>
           <label class="full">Logo - URL pública<input id="cfgLogo" type="url" placeholder="https://..." value="${esc(c?.logo_url||'')}"></label>
+          <label class="full">Imagem de cabeçalho - URL pública<input id="cfgCabecalho" type="url" placeholder="https://..." value="${esc(c?.cabecalho_url||'')}"><small>Use uma imagem horizontal para o cabeçalho dos relatórios.</small></label>
           <label class="full">Imagem de rodapé - URL pública<input id="cfgRodape" type="url" placeholder="https://..." value="${esc(c?.rodape_url||'')}"><small style="display:block;margin-top:5px;color:#6c757d;font-weight:normal">Use uma imagem horizontal própria para o rodapé dos documentos.</small></label>
-          <label class="full">Marca-d'água - URL pública (PNG transparente recomendado)<input id="cfgMarcaDagua" type="url" placeholder="https://..." value="${esc(c?.marca_dagua_url||'')}"><small style="display:block;margin-top:5px;color:#6c757d;font-weight:normal">Utilizada nos relatórios de visita SST. Para salvar, execute antes a migração SQL dos novos campos.</small></label>
+          <label class="full">Marca-d'água - URL pública (PNG transparente recomendado)<input id="cfgMarcaDagua" type="url" placeholder="https://..." value="${esc(c?.marca_dagua_url||'')}"><small style="display:block;margin-top:5px;color:#6c757d;font-weight:normal">Usada nos relatórios emitidos pelo SST Vision.</small></label>
           <label>Opacidade da marca-d'água (%)<input id="cfgMarcaOpacidade" type="number" min="5" max="30" step="1" value="${Math.round(Number(c?.marca_dagua_opacidade??0.12)*100)}"></label>
           <label>Posição da marca-d'água<select id="cfgMarcaPosicao"><option value="laterais" ${(c?.marca_dagua_posicao||'laterais')==='laterais'?'selected':''}>Laterais (modelo timbrado)</option><option value="centro" ${c?.marca_dagua_posicao==='centro'?'selected':''}>Centro</option><option value="esquerda" ${c?.marca_dagua_posicao==='esquerda'?'selected':''}>Esquerda</option><option value="direita" ${c?.marca_dagua_posicao==='direita'?'selected':''}>Direita</option></select></label>
         </div>
@@ -123,12 +124,13 @@
   function atualizarPreview(){
     const box=document.getElementById('previewIdentidade'); if(!box)return;
     const logo=document.getElementById('cfgLogo').value.trim();
+    const cabecalho=document.getElementById('cfgCabecalho').value.trim();
     const rodape=document.getElementById('cfgRodape').value.trim();
     const marca=document.getElementById('cfgMarcaDagua').value.trim();
     const op=Math.min(30,Math.max(5,Number(document.getElementById('cfgMarcaOpacidade').value||12)))/100;
     const nome=document.getElementById('cfgNome').value.trim()||'Nome da empresa';
     const sub=document.getElementById('cfgSubtitulo').value.trim();
-    box.innerHTML=`<div style="position:relative;overflow:hidden;min-height:130px"><div style="position:relative;z-index:1;display:flex;gap:18px;align-items:center">${logo?`<img src="${esc(urlImagem(logo))}" alt="Logo" style="max-width:180px;max-height:80px;object-fit:contain" onerror="this.style.display='none'">`:'<div style="width:130px;height:60px;border:1px dashed #b8c4c0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#89938f">LOGO</div>'}<div><strong style="font-size:20px">${esc(nome)}</strong>${sub?`<div style="margin-top:5px;color:#6c757d">${esc(sub)}</div>`:''}</div></div>${rodape?`<div style="margin-top:16px;padding-top:12px;border-top:1px solid #dde6e3"><img src="${esc(urlImagem(rodape))}" alt="Rodapé" style="width:100%;max-height:100px;object-fit:contain;object-position:left center" onerror="this.style.display='none'"></div>`:''}</div>${marca?`<div style="position:absolute;inset:0;pointer-events:none;opacity:${op};background-image:url('${esc(urlImagem(marca))}');background-size:contain;background-position:center;background-repeat:no-repeat"></div>`:''}`;
+    box.innerHTML=`<div style="position:relative;overflow:hidden;min-height:130px">${cabecalho?`<img src="${esc(urlImagem(cabecalho))}" alt="Cabeçalho" style="display:block;width:100%;max-height:75px;object-fit:contain;margin-bottom:10px" onerror="this.style.display='none'">`:''}<div style="position:relative;z-index:1;display:flex;gap:18px;align-items:center">${logo?`<img src="${esc(urlImagem(logo))}" alt="Logo" style="max-width:180px;max-height:80px;object-fit:contain" onerror="this.style.display='none'">`:'<div style="width:130px;height:60px;border:1px dashed #b8c4c0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#89938f">LOGO</div>'}<div><strong style="font-size:20px">${esc(nome)}</strong>${sub?`<div style="margin-top:5px;color:#6c757d">${esc(sub)}</div>`:''}</div></div>${rodape?`<div style="margin-top:16px;padding-top:12px;border-top:1px solid #dde6e3"><img src="${esc(urlImagem(rodape))}" alt="Rodapé" style="width:100%;max-height:100px;object-fit:contain;object-position:left center" onerror="this.style.display='none'"></div>`:''}</div>${marca?`<div style="position:absolute;inset:0;pointer-events:none;opacity:${op};background-image:url('${esc(urlImagem(marca))}');background-size:contain;background-position:center;background-repeat:no-repeat"></div>`:''}`;
   }
 
   function atualizarCamposCertificado(){
@@ -166,6 +168,7 @@
       nome_exibicao:nome,
       subtitulo:document.getElementById('cfgSubtitulo').value.trim()||null,
       logo_url:document.getElementById('cfgLogo').value.trim()||null,
+      cabecalho_url:document.getElementById('cfgCabecalho').value.trim()||null,
       rodape_url:document.getElementById('cfgRodape').value.trim()||null,
       marca_dagua_url:document.getElementById('cfgMarcaDagua').value.trim()||null,
       marca_dagua_opacidade:Math.min(30,Math.max(5,Number(document.getElementById('cfgMarcaOpacidade').value||12)))/100,
@@ -181,6 +184,11 @@
       atualizado_em:new Date().toISOString()
     };
     try{
+      if(dados.cabecalho_url){
+        await supabaseFetch('empresa_configuracao?select=cabecalho_url&limit=1');
+      }else if(!registro || !Object.hasOwn(registro,'cabecalho_url')){
+        delete dados.cabecalho_url;
+      }
       let retorno;
       await supabaseFetch('empresa_configuracao?emissora_ativa=eq.true&empresa_id=neq.'+encodeURIComponent(empresaId),{method:'PATCH',body:JSON.stringify({emissora_ativa:false,atualizado_em:new Date().toISOString()})});
       if(registro?.id){
@@ -228,6 +236,7 @@
         document.getElementById('cfgEndereco').value=empresaSelecionada?.endereco||'';
         document.getElementById('cfgCor').value=conf?.cor_principal||'#0b8f43';
         document.getElementById('cfgLogo').value=conf?.logo_url||'';
+        document.getElementById('cfgCabecalho').value=conf?.cabecalho_url||'';
         document.getElementById('cfgRodape').value=conf?.rodape_url||'';
         document.getElementById('cfgMarcaDagua').value=conf?.marca_dagua_url||'';
         document.getElementById('cfgMarcaOpacidade').value=String(Math.round(Number(conf?.marca_dagua_opacidade??0.12)*100));
@@ -242,7 +251,7 @@
         atualizarPreview();
         atualizarPreviewAssinatura();
       };
-      ['cfgNome','cfgSubtitulo','cfgLogo','cfgRodape','cfgMarcaDagua','cfgMarcaOpacidade','cfgMarcaPosicao'].forEach(id=>document.getElementById(id).addEventListener('input',atualizarPreview));
+      ['cfgNome','cfgSubtitulo','cfgLogo','cfgCabecalho','cfgRodape','cfgMarcaDagua','cfgMarcaOpacidade','cfgMarcaPosicao'].forEach(id=>document.getElementById(id).addEventListener('input',atualizarPreview));
       document.getElementById('cfgCertModelo').onchange=atualizarCamposCertificado;
       document.getElementById('cfgAssTam').oninput=atualizarPreviewAssinatura;
       document.getElementById('cfgAssOp').oninput=atualizarPreviewAssinatura;

@@ -165,10 +165,25 @@
     iframe.appendChild(style);const corpo=document.createElement('div');corpo.innerHTML=doc.body.innerHTML;corpo.style.cssText='width:794px;padding:40px 48px;background:#fff';iframe.appendChild(corpo);document.body.appendChild(iframe);
     try{
       const pdf=new JsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+      const identidade=IdentidadeRelatorios.marcas(await IdentidadeRelatorios.carregar());
+      async function abrirImagem(url){
+        if(!url)return null;
+        const img=new Image();
+        img.crossOrigin='anonymous';
+        img.src=url;
+        const pronta=await Promise.race([
+          img.decode().then(()=>true,()=>false),
+          new Promise(resolve=>setTimeout(()=>resolve(false),4000))
+        ]);
+        return pronta?img:null;
+      }
+      const [cabecalho,marca,rodape]=await Promise.all(
+        [identidade.cabecalho,identidade.marca,identidade.rodape].map(abrirImagem)
+      );
+      const margemTopo=cabecalho?22:0,margemRodape=rodape?22:0;
       const canvas=await render(corpo,{scale:1.7,useCORS:true,backgroundColor:'#ffffff',width:794,windowWidth:794});
       const escala=canvas.width/corpo.getBoundingClientRect().width;
-      const pxPagina=Math.floor(canvas.width*297/210);
-      const limiteCss=pxPagina/escala;
+      const pxPagina=Math.floor(canvas.width*(297-margemTopo-margemRodape)/210);
       const origem=corpo.getBoundingClientRect().top;
       const pos=el=>el.getBoundingClientRect().top-origem;
       const fim=el=>el.getBoundingClientRect().bottom-origem;
@@ -199,10 +214,26 @@
           if(limite<=inicio+10)limite=Math.min(inicio+pxPagina,alturaTotal);
         }
         const altura=Math.max(1,Math.min(alturaTotal-inicio,limite-inicio));
-        const parte=document.createElement('canvas');parte.width=canvas.width;parte.height=altura;
-        parte.getContext('2d').drawImage(canvas,0,inicio,canvas.width,altura,0,0,canvas.width,altura);
+        const parte=document.createElement('canvas');
+        parte.width=canvas.width;parte.height=Math.round(canvas.width*297/210);
+        const ctx=parte.getContext('2d'),px=canvas.width/210;
+        function desenhar(img,minX,maxX,minY,maxY){
+          if(!img)return;
+          const fator=Math.min((maxX-minX)*px/img.naturalWidth,(maxY-minY)*px/img.naturalHeight);
+          const largura=img.naturalWidth*fator,altura=img.naturalHeight*fator;
+          ctx.drawImage(img,(minX+maxX)*px/2-largura/2,(minY+maxY)*px/2-altura/2,largura,altura);
+        }
+        ctx.fillStyle='#fff';ctx.fillRect(0,0,parte.width,parte.height);
+        ctx.drawImage(canvas,0,inicio,canvas.width,altura,0,margemTopo*px,canvas.width,altura);
+        desenhar(cabecalho,14,196,3,20);
+        desenhar(rodape,14,196,277,294);
+        ctx.globalAlpha=identidade.opacidade;
+        for(const posicao of identidade.posicoes){
+          const centro=posicao===5?51:posicao===95?159:105;
+          desenhar(marca,centro-38,centro+38,93,203);
+        }
         if(pagina++)pdf.addPage();
-        pdf.addImage(parte.toDataURL('image/jpeg',.94),'JPEG',0,0,210,altura*210/canvas.width);
+        pdf.addImage(parte.toDataURL('image/jpeg',.94),'JPEG',0,0,210,297);
         inicio+=altura;
       }
       return pdf.output('blob');

@@ -1,6 +1,8 @@
 const CACHE_PREFIX = `sst-vision-checklist:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v22`;
+const CACHE_NAME = `${CACHE_PREFIX}v23`;
 const ASSETS = [
+  '../js/identidade-relatorios.js',
+  '../treinamento/supabase-config.js',
   './',
   './index.html',
   './cadastro-itens.html',

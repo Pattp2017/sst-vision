@@ -11,5 +11,5 @@ window.CADASTROS = [
   {id:'matriz',grupo:'epis',nome:'Matriz cargo × itens',descricao:'Itens e quantidades previstos para cada cargo.',etiquetas:['EPIs','Cargos'],src:'../epis/index.html?central=1#matriz'},
   {id:'itens-checklist',grupo:'checklist',nome:'Itens de verificação',descricao:'Critérios de inspeção e medidas corretivas recomendadas.',etiquetas:['Checklist'],src:'../checklist/cadastro-itens.html?central=1'},
   {id:'modelos',grupo:'checklist',nome:'Modelos de inspeção',descricao:'Organize os locais e itens aplicados em cada vistoria.',etiquetas:['Checklist'],src:'../checklist/modelos-inspecao.html?central=1'},
-  {id:'configuracoes',grupo:'configuracoes',nome:'Empresa emissora e documentos',descricao:'Identidade visual, logos, rodapés e modelos de certificados.',etiquetas:['Configurações gerais'],src:'../treinamento/index.html?central=1&cadastro=configuracoes'}
+  {id:'configuracoes',grupo:'configuracoes',nome:'Empresa emissora e documentos',descricao:'Cabeçalho, marca-d’água e rodapé dos relatórios, logos e modelos de certificados.',etiquetas:['Configurações gerais'],src:'../treinamento/index.html?central=1&cadastro=configuracoes'}
 ];
