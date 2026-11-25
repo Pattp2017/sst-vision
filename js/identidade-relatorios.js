@@ -320,10 +320,12 @@
       }
       if (m.posicoes.length === 2) {
         let artePreparada;
-        for (const [primeira, segunda] of porCamada.values()) {
+        for (const [pai, [primeira, segunda]] of porCamada) {
           marcasProntas.push(primeira.decode().then(async () => {
             const proporcao = primeira.naturalWidth / primeira.naturalHeight;
             if (proporcao < .68 || proporcao > .74) return;
+            primeira.classList.add('sst-marca-folha');
+            segunda.remove();
             artePreparada ||= prepararMarcaDeFolha(doc, m.marca, m.opacidade).catch(() => '');
             const dados = await artePreparada;
             if (!primeira.isConnected) return;
@@ -338,8 +340,6 @@
             } else {
               primeira.style.mixBlendMode = 'multiply';
             }
-            primeira.classList.add('sst-marca-folha');
-            segunda.remove();
             if (pai === previa) {
               adicionar(previa, 'sst-aviso-marca', '',
                 'A marca-d’água de folha inteira aparece na prévia de impressão.');
