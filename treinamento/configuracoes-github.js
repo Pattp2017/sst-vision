@@ -163,9 +163,9 @@
     const sub=document.getElementById('cfgSubtitulo').value.trim();
     const config=lerCabecalho();
     document.getElementById('cfgDetalhesCabecalho').hidden=!config;
-    const modelo=IdentidadeRelatorios.cabecalhoHTML({cabecalho_config:config,cabecalho_url:cabecalho,logo_url:logo},'visita-campo','Relatório de Visita Técnica');
+    const modelo=IdentidadeRelatorios.cabecalhoHTML({cabecalho_config:config,cabecalho_url:cabecalho,logo_url:logo},'visita-campo','Relatório de Visita Técnica',{editavel:true});
     if(modelo){
-      box.innerHTML=modelo+'<div style="text-align:right;font:11px Arial">Página 1/1</div>';
+      box.innerHTML=modelo+(config.modelo==='tabela'?'':'<div style="text-align:right;font:11px Arial">Página 1/1</div>');
       return;
     }
     box.innerHTML=`<div style="position:relative;overflow:hidden;min-height:130px">${cabecalho?`<img src="${esc(urlImagem(cabecalho))}" alt="Cabeçalho" style="display:block;width:100%;max-height:75px;object-fit:contain;margin-bottom:10px" onerror="this.style.display='none'">`:''}<div style="position:relative;z-index:1;display:flex;gap:18px;align-items:center">${logo?`<img src="${esc(urlImagem(logo))}" alt="Logo" style="max-width:180px;max-height:80px;object-fit:contain" onerror="this.style.display='none'">`:'<div style="width:130px;height:60px;border:1px dashed #b8c4c0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#89938f">LOGO</div>'}<div><strong style="font-size:20px">${esc(nome)}</strong>${sub?`<div style="margin-top:5px;color:#6c757d">${esc(sub)}</div>`:''}</div></div>${rodape?`<div style="margin-top:16px;padding-top:12px;border-top:1px solid #dde6e3"><img src="${esc(urlImagem(rodape))}" alt="Rodapé" style="width:100%;max-height:100px;object-fit:contain;object-position:left center" onerror="this.style.display='none'"></div>`:''}</div>${marca?`<div style="position:absolute;inset:0;pointer-events:none;opacity:${op};background-image:url('${esc(urlImagem(marca))}');background-size:contain;background-position:center;background-repeat:no-repeat"></div>`:''}`;
@@ -298,6 +298,16 @@
       };
       preencherCabecalho(registro?.cabecalho_config);
       document.getElementById('cfgCamposCabecalho').oninput=atualizarPreview;
+      document.getElementById('previewIdentidade').oninput=event=>{
+        const id=event.target.dataset.cabecalhoFixo;
+        if(!id)return;
+        const campos=document.getElementById('cfgCamposCabecalho');
+        const codigoVisita=campos.querySelector('[data-codigo="visita-campo"]');
+        const destino=id==='codigo' && (event.target.dataset.codigoEspecifico || codigoVisita.value.trim())
+          ? codigoVisita : campos.querySelector(`[data-valor="${id}"]`);
+        if(destino===codigoVisita)event.target.dataset.codigoEspecifico='1';
+        destino.value=event.target.value;
+      };
       ['cfgModeloCabecalho','cfgNome','cfgSubtitulo','cfgLogo','cfgCabecalho','cfgRodape','cfgMarcaDagua','cfgMarcaOpacidade','cfgMarcaPosicao'].forEach(id=>document.getElementById(id).addEventListener('input',atualizarPreview));
       document.getElementById('cfgCertModelo').onchange=atualizarCamposCertificado;
       document.getElementById('cfgAssTam').oninput=atualizarPreviewAssinatura;

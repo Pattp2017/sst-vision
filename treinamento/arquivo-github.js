@@ -182,11 +182,13 @@
       const [cabecalho,marca,rodape]=await Promise.all(
         [modelo?'':identidade.cabecalho,identidade.marca,identidade.rodape].map(abrirImagem)
       );
-      let arteModelo;
+      let arteModelo, colunasTabela=0;
       if(modelo){
         const topo=document.createElement('div');
         topo.style.width='688px';
         topo.innerHTML=modelo;
+        corpo.querySelector('.cabecalho h1')?.remove();
+        colunasTabela=topo.querySelector('.sst-cab-tabela tbody tr')?.cells.length||0;
         iframe.appendChild(topo);
         arteModelo=await render(topo,{scale:1.7,useCORS:true,imageTimeout:4000,backgroundColor:'#ffffff'});
         topo.remove();
@@ -256,7 +258,10 @@
         pdf.setFontSize(9);
         for(let folha=1;folha<=pagina;folha++){
           pdf.setPage(folha);
-          pdf.text('Página '+folha+'/'+pagina,196,33,{align:'right'});
+          const largura=Math.min(182,26*arteModelo.width/arteModelo.height);
+          const x=105+largura/2-largura/(2*colunasTabela);
+          if(colunasTabela)pdf.text(folha+'/'+pagina,x,4+largura*0.81*arteModelo.height/arteModelo.width,{align:'center',baseline:'middle'});
+          else pdf.text('Página '+folha+'/'+pagina,196,33,{align:'right'});
         }
       }
       return pdf.output('blob');

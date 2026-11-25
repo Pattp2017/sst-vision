@@ -84,7 +84,7 @@
   const esc = valor => String(valor ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'})[c]);
 
-  function cabecalhoHTML(identidade, tipo, tituloPadrao) {
+  function cabecalhoHTML(identidade, tipo, tituloPadrao, {editavel = false} = {}) {
     const config = identidade.cabecalho_config;
     if (!['simples', 'tabela', 'imagem'].includes(config?.modelo)) return '';
     const relatorio = config.relatorios?.[tipo];
@@ -93,11 +93,19 @@
     if (config.modelo === 'tabela') {
       const valores = {codigo:relatorio?.codigo || config.valores?.codigo, data};
       const colunas = camposCabecalho.filter(([id]) => config.rotulos?.[id] !== '');
+      colunas.push(['pagina', 'Página']);
+      const valorCelula = id => {
+        if (id === 'pagina') return editavel ? '1/1' : '';
+        const valor = esc(valores[id] ?? config.valores?.[id] ?? '');
+        if (!editavel || id === 'data') return valor;
+        return `<input data-cabecalho-fixo="${id}" aria-label="${esc(config.rotulos?.[id] || camposCabecalho.find(([chave]) => chave === id)[1])}" value="${valor}" placeholder="Digite aqui" style="width:100%;min-width:0;padding:3px;text-align:center;box-sizing:border-box">`;
+      };
       return `<table class="sst-cab-tabela" style="width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font:11px Arial;color:#111">
-        <thead><tr><th colspan="${colunas.length || 1}" style="border:1px solid;padding:7px;font-size:16px">${titulo}</th></tr></thead>
-        ${colunas.length ? `<tbody><tr>${colunas.map(([id, nome]) => `<th style="border:1px solid;padding:3px">${esc(config.rotulos?.[id] ?? nome)}</th>`).join('')}</tr>
-        <tr>${colunas.map(([id]) => `<td style="border:1px solid;padding:3px;overflow-wrap:anywhere">${esc(valores[id] ?? config.valores?.[id] ?? '')}</td>`).join('')}</tr></tbody>` : ''}
+        <thead><tr><th colspan="${colunas.length}" style="border:1px solid;padding:7px;font-size:16px">${titulo}</th></tr></thead>
+        <tbody><tr>${colunas.map(([id, nome]) => `<th style="border:1px solid;padding:3px">${esc(config.rotulos?.[id] ?? nome)}</th>`).join('')}</tr>
+        <tr>${colunas.map(([id]) => `<td style="border:1px solid;padding:3px;overflow-wrap:anywhere">${valorCelula(id)}</td>`).join('')}</tr></tbody>
       </table>`;
+
     }
     const arte = imagem(config.modelo === 'imagem' ? identidade.cabecalho_url : identidade.logo_url);
     return `<div style="text-align:center;font:12px Arial;color:#111">
@@ -152,9 +160,16 @@
     return tela.toDataURL('image/png');
   }
 
-  function inserir(doc, identidade, {previa, rodapePadrao, tipo, titulo = doc.title} = {}) {
+  function inserir(doc, identidade, {previa, rodapePadrao, tipo, titulo = doc.title, tituloExistente} = {}) {
     const m = marcas(identidade);
     const cabecalho = cabecalhoHTML(identidade, tipo, titulo);
+    const tabelaInstitucional = identidade.cabecalho_config?.modelo === 'tabela';
+    const colunas = 1 + camposCabecalho.filter(([id]) => identidade.cabecalho_config?.rotulos?.[id] !== '').length;
+    const paginacao = tabelaInstitucional
+      ? `@top-right-corner { content:counter(page) "/" counter(pages); vertical-align:top;
+          text-align:left; white-space:nowrap; overflow:visible; padding-top:21.8mm;
+          text-indent:calc(-${181.8 / colunas / 2}mm - 1.5ch); font:11px Arial; }`
+      : '@top-right { content:"Página " counter(page) "/" counter(pages); vertical-align:bottom; padding-bottom:2mm; font:9pt Arial; }';
     doc.querySelectorAll('[data-identidade-relatorio]').forEach(el => el.remove());
     if (!(cabecalho || m.cabecalho || m.rodape || m.marca || rodapePadrao)) return {imagens:[], preparo:Promise.resolve()};
     const estilo = doc.createElement('style');
@@ -177,9 +192,10 @@
       @media print {
         @page { margin:${cabecalho ? 37 : m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
           ${topo ? `@top-center { content:url(${cssString(topo)}); width:181.8mm; vertical-align:top; padding-top:3mm; }` : ''}
-          ${cabecalho ? '@top-right { content: "Página " counter(page) "/" counter(pages); vertical-align:bottom; padding-bottom:2mm; font:9pt Arial; }' : ''}
+          ${topo ? paginacao : ''}
         }
         .sst-cab-modelo-previa { display:none!important }
+        ${topo && tituloExistente ? `${tituloExistente} { display:none!important }` : ''}
         .sst-timbre-previa,.sst-marca-previa { display:none!important }
         .sst-timbre-impressao { display:block; position:fixed; pointer-events:none }
         .sst-timbre-topo { left:0; width:100%; height:17mm;
