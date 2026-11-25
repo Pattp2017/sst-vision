@@ -47,19 +47,28 @@
     if (!(m.cabecalho || m.rodape || m.marca || rodapePadrao)) return [];
     const estilo = doc.createElement('style');
     estilo.dataset.identidadeRelatorio = '';
+    // A caixa de margem pertence à folha, independentemente da altura do conteúdo.
+    const cssString = valor => JSON.stringify(String(valor).replace(/[\r\n\f]/g, ' '));
+    const rodapePaginado = m.rodape || rodapePadrao ? `
+      @bottom-center {
+        content:${cssString(m.rodape ? '' : rodapePadrao)};
+        width:182mm; height:17mm; vertical-align:middle;
+        font:9pt Arial; color:#475569;
+        print-color-adjust:exact; -webkit-print-color-adjust:exact;
+        ${m.rodape ? `background:url(${cssString(m.rodape)}) center / contain no-repeat;` : ''}
+      }` : '';
     estilo.textContent = `
       .sst-timbre-impressao { display:none }
       .sst-timbre-previa { display:block; width:100%; max-height:17mm; object-fit:contain }
       .sst-marca-previa { position:absolute; top:50%; max-width:42%; max-height:110mm;
         transform:translate(-50%, -50%); pointer-events:none; z-index:0 }
       @media print {
-        @page { margin:${m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm }
+        @page { margin:${m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado} }
         .sst-timbre-previa,.sst-marca-previa { display:none!important }
         .sst-timbre-impressao { display:block; position:fixed; pointer-events:none }
-        .sst-timbre-topo,.sst-timbre-rodape { left:0; width:100%; height:17mm;
+        .sst-timbre-topo { left:0; width:100%; height:17mm;
           object-fit:contain; z-index:101 }
         .sst-timbre-topo { top:-21mm }
-        .sst-timbre-rodape { bottom:-20mm; font:9pt Arial; color:#475569 }
         .sst-timbre-marca { top:50%; max-width:42%; max-height:110mm;
           transform:translate(-50%, -50%); z-index:100 }
       }`;
@@ -80,9 +89,6 @@
       return elemento;
     }
     if (m.cabecalho) adicionar(doc.body, 'sst-timbre-impressao sst-timbre-topo', m.cabecalho);
-    if (m.rodape || rodapePadrao) {
-      adicionar(doc.body, 'sst-timbre-impressao sst-timbre-rodape', m.rodape, rodapePadrao);
-    }
     if (previa && m.cabecalho) adicionar(previa, 'sst-timbre-previa', m.cabecalho);
     if (previa && m.rodape && !rodapePadrao) {
       const rodape = adicionar(previa, 'sst-timbre-previa', m.rodape);
