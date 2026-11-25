@@ -698,7 +698,7 @@ document.getElementById('estoquePrintBtn').onclick=()=>{
     `${unidades} unidades em estoque &nbsp; | &nbsp; ${positivas} itens/lotes com saldo &nbsp; | &nbsp; ${zeradas} zerados`+
     ` &nbsp; | &nbsp; <span style="font-weight:400">Filtro: ${filtro}</span>`;
 
-  IdentidadeRelatorios.imprimir();
+  IdentidadeRelatorios.imprimir(window,{tipo:'estoque',titulo:'Relatório de Estoque de EPIs'});
 };
 
 
@@ -1767,7 +1767,7 @@ document.getElementById('progGerarBtn').onclick=gerarProgramacaoTrocas;
 document.getElementById('progImprimirBtn').onclick=()=>{
   if(!programacaoAtual.length)return alert('Gere a programação antes de imprimir.');
   document.body.classList.add('printing-programacao');
-  IdentidadeRelatorios.imprimir().finally(()=>document.body.classList.remove('printing-programacao'));
+  IdentidadeRelatorios.imprimir(window,{tipo:'programacao',titulo:'Programação de EPIs'}).finally(()=>document.body.classList.remove('printing-programacao'));
 };
 document.getElementById('progResultado').addEventListener('click',e=>{
   const btn=e.target.closest('.prog-gerar-saida');

@@ -71,10 +71,46 @@
     return preparo;
   }
 
-  function inserir(doc, identidade, {previa, rodapePadrao} = {}) {
+  const camposCabecalho = [
+    ['codigo', 'Código'], ['estabelecido', 'Estabelecido em'],
+    ['data', 'Revisado em'], ['elaborado', 'Elaborado por'], ['aprovado', 'Aprovado por']
+  ];
+  const tiposRelatorio = [
+    ['visita-campo', 'Relatório de Visita Técnica'], ['visita-documental', 'Relatório de Visita Documental'],
+    ['extintores', 'Relatório de Inspeção de Extintores'], ['vencimentos', 'Controle de Vencimentos'],
+    ['estoque', 'Relatório de Estoque de EPIs'], ['programacao', 'Programação de EPIs'],
+    ['compras', 'Compras e Cotação de EPI']
+  ];
+  const esc = valor => String(valor ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'})[c]);
+
+  function cabecalhoHTML(identidade, tipo, tituloPadrao) {
+    const config = identidade.cabecalho_config;
+    if (!['simples', 'tabela', 'imagem'].includes(config?.modelo)) return '';
+    const relatorio = config.relatorios?.[tipo];
+    const titulo = esc(relatorio?.titulo || tituloPadrao);
+    const data = new Intl.DateTimeFormat('pt-BR', {timeZone:'America/Sao_Paulo'}).format(new Date());
+    if (config.modelo === 'tabela') {
+      const valores = {codigo:relatorio?.codigo || config.valores?.codigo, data};
+      const colunas = camposCabecalho.filter(([id]) => config.rotulos?.[id] !== '');
+      return `<table class="sst-cab-tabela" style="width:100%;border-collapse:collapse;table-layout:fixed;text-align:center;font:11px Arial;color:#111">
+        <thead><tr><th colspan="${colunas.length || 1}" style="border:1px solid;padding:7px;font-size:16px">${titulo}</th></tr></thead>
+        ${colunas.length ? `<tbody><tr>${colunas.map(([id, nome]) => `<th style="border:1px solid;padding:3px">${esc(config.rotulos?.[id] ?? nome)}</th>`).join('')}</tr>
+        <tr>${colunas.map(([id]) => `<td style="border:1px solid;padding:3px;overflow-wrap:anywhere">${esc(valores[id] ?? config.valores?.[id] ?? '')}</td>`).join('')}</tr></tbody>` : ''}
+      </table>`;
+    }
+    const arte = imagem(config.modelo === 'imagem' ? identidade.cabecalho_url : identidade.logo_url);
+    return `<div style="text-align:center;font:12px Arial;color:#111">
+      ${arte ? `<img src="${esc(arte)}" alt="" style="display:block;margin:auto;max-width:100%;max-height:14mm;object-fit:contain">` : ''}
+      <div style="font-size:16px;font-weight:bold">${titulo}</div><div>${data}</div>
+    </div>`;
+  }
+
+  function inserir(doc, identidade, {previa, rodapePadrao, tipo, titulo = doc.title} = {}) {
     const m = marcas(identidade);
+    const cabecalho = cabecalhoHTML(identidade, tipo, titulo);
     doc.querySelectorAll('[data-identidade-relatorio]').forEach(el => el.remove());
-    if (!(m.cabecalho || m.rodape || m.marca || rodapePadrao)) return {imagens:[], preparo:Promise.resolve()};
+    if (!(cabecalho || m.cabecalho || m.rodape || m.marca || rodapePadrao)) return {imagens:[], preparo:Promise.resolve()};
     const estilo = doc.createElement('style');
     estilo.dataset.identidadeRelatorio = '';
     // A caixa de margem pertence à folha, independentemente da altura do conteúdo.
@@ -93,7 +129,11 @@
       .sst-marca-previa { position:absolute; top:50%; max-width:42%; max-height:110mm;
         transform:translate(-50%, -50%); pointer-events:none; z-index:0 }
       @media print {
-        @page { margin:${m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)} }
+        @page { margin:${cabecalho ? 37 : m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
+          ${cabecalho ? '@top-right { content: "Página " counter(page) "/" counter(pages); vertical-align:bottom; padding-bottom:2mm; font:9pt Arial; }' : ''}
+        }
+        .sst-cab-modelo { top:-33mm; left:0; right:0; max-height:26mm; overflow:hidden; z-index:101 }
+        .sst-cab-modelo-previa { display:none!important }
         .sst-timbre-previa,.sst-marca-previa { display:none!important }
         .sst-timbre-impressao { display:block; position:fixed; pointer-events:none }
         .sst-timbre-topo { left:0; width:100%; height:17mm;
@@ -126,8 +166,12 @@
       pai.prepend(elemento);
       return elemento;
     }
-    if (m.cabecalho) adicionar(doc.body, 'sst-timbre-impressao sst-timbre-topo', m.cabecalho);
-    if (previa && m.cabecalho) adicionar(previa, 'sst-timbre-previa', m.cabecalho);
+    if (cabecalho) {
+      adicionar(doc.body, 'sst-timbre-impressao sst-cab-modelo', '').innerHTML = cabecalho;
+      if (previa) adicionar(previa, 'sst-cab-modelo-previa', '').innerHTML = cabecalho;
+    }
+    if (!cabecalho && m.cabecalho) adicionar(doc.body, 'sst-timbre-impressao sst-timbre-topo', m.cabecalho);
+    if (previa && !cabecalho && m.cabecalho) adicionar(previa, 'sst-timbre-previa', m.cabecalho);
     if (previa && m.rodape && !rodapePadrao) {
       const rodape = adicionar(previa, 'sst-timbre-previa', m.rodape);
       previa.append(rodape);
@@ -146,9 +190,9 @@
     return {imagens, preparo};
   }
 
-  async function imprimir(janela = window) {
+  async function imprimir(janela = window, opcoes) {
     const identidade = await carregar();
-    const {imagens, preparo} = inserir(janela.document, identidade);
+    const {imagens, preparo} = inserir(janela.document, identidade, opcoes);
     await Promise.race([
       Promise.allSettled([...imagens.map(img => img.decode()), preparo]),
       new Promise(resolve => setTimeout(resolve, 4500))
@@ -158,5 +202,5 @@
     }
   }
 
-  window.IdentidadeRelatorios = {carregar, inserir, imprimir, marcas};
+  window.IdentidadeRelatorios = {carregar, inserir, imprimir, marcas, cabecalhoHTML, camposCabecalho, tiposRelatorio};
 })();

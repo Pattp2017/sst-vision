@@ -179,7 +179,9 @@ function preview(){
  const heading=documental?'Verificação documental SST':'Não conformidades identificadas';
  const logo=githubRaw(identidade.logo_url);
  const logoHTML=logo?'<img class="rv-logo-emissora" src="'+esc(logo)+'" alt="Logotipo da empresa emissora">':'<span class="rv-logo-ausente">Logotipo não configurado</span>';
- const cab='<div class="rv-timbrado"><table class="rv-timbrado-tabela"><tbody><tr><th class="rv-logo-celula">'+logoHTML+'</th><th class="rv-timbrado-titulo">RELATÓRIO DE VISITA TÉCNICA | SST</th></tr></tbody></table></div>';
+ const tipoRelatorio=documental?'visita-documental':'visita-campo';
+ const tituloRelatorio=documental?'Relatório de Visita Documental | SST':'Relatório de Visita Técnica | SST';
+ const cab=IdentidadeRelatorios.cabecalhoHTML(identidade,tipoRelatorio,tituloRelatorio)?'':'<div class="rv-timbrado"><table class="rv-timbrado-tabela"><tbody><tr><th class="rv-logo-celula">'+logoHTML+'</th><th class="rv-timbrado-titulo">RELATÓRIO DE VISITA TÉCNICA | SST</th></tr></tbody></table></div>';
  const rodape=IdentidadeRelatorios.marcas(identidade).rodape;
  const meta='<div class="report-meta">'+[['Empresa / Cliente',v.empresa],['Data da visita',dataBR(v.data)],['Início',v.hora_inicio],['Término',v.hora_fim],['Profissional responsável pela visita',v.consultor],['Representante da empresa / Acompanhante',v.responsavel_acompanhamento]].map(([k,val])=>'<div><b>'+k+':</b> '+esc(val||'Não informado')+'</div>').join('')+'</div>';
  const objective=documental?'Verificar a documentação de SST, sua situação e aplicabilidade, nos limites dos itens avaliados.':'Realizar acompanhamento técnico das condições de Segurança e Saúde no Trabalho, visando identificar situações que necessitem de adequação.';
@@ -223,7 +225,7 @@ function preview(){
   const secFinal='<section class="report-section"><h2>5. Considerações finais</h2>'+conclusaoTexto+'</section>';
   $('previa').innerHTML=base+'<div class="rv-campo">'+secObjetivo+secAtividades+secNC+secFotos+secFinal+'</div>'+proxima+rodapeHTML;
  }
- preparoImpressao=IdentidadeRelatorios.inserir(document, identidade, {previa:$('previa'), rodapePadrao:identidade.nome_exibicao||'RG Certe'}).preparo;
+ preparoImpressao=IdentidadeRelatorios.inserir(document, identidade, {previa:$('previa'), tipo:tipoRelatorio, titulo:tituloRelatorio, rodapePadrao:identidade.nome_exibicao||'RG Certe'}).preparo;
 
 }
 

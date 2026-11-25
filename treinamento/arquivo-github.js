@@ -165,7 +165,9 @@
     iframe.appendChild(style);const corpo=document.createElement('div');corpo.innerHTML=doc.body.innerHTML;corpo.style.cssText='width:794px;padding:40px 48px;background:#fff';iframe.appendChild(corpo);document.body.appendChild(iframe);
     try{
       const pdf=new JsPDF({unit:'mm',format:'a4',orientation:'portrait'});
-      const identidade=IdentidadeRelatorios.marcas(await IdentidadeRelatorios.carregar());
+      const emissora=await IdentidadeRelatorios.carregar();
+      const identidade=IdentidadeRelatorios.marcas(emissora);
+      const modelo=IdentidadeRelatorios.cabecalhoHTML(emissora,'vencimentos','Controle Geral de Vencimentos');
       async function abrirImagem(url){
         if(!url)return null;
         const img=new Image();
@@ -178,9 +180,18 @@
         return pronta?img:null;
       }
       const [cabecalho,marca,rodape]=await Promise.all(
-        [identidade.cabecalho,identidade.marca,identidade.rodape].map(abrirImagem)
+        [modelo?'':identidade.cabecalho,identidade.marca,identidade.rodape].map(abrirImagem)
       );
-      const margemTopo=cabecalho?22:0,margemRodape=rodape?22:0;
+      let arteModelo;
+      if(modelo){
+        const topo=document.createElement('div');
+        topo.style.width='688px';
+        topo.innerHTML=modelo;
+        iframe.appendChild(topo);
+        arteModelo=await render(topo,{scale:1.7,useCORS:true,imageTimeout:4000,backgroundColor:'#ffffff'});
+        topo.remove();
+      }
+      const margemTopo=arteModelo?37:cabecalho?22:0,margemRodape=rodape?22:0;
       const canvas=await render(corpo,{scale:1.7,useCORS:true,backgroundColor:'#ffffff',width:794,windowWidth:794});
       const escala=canvas.width/corpo.getBoundingClientRect().width;
       const pxPagina=Math.floor(canvas.width*(297-margemTopo-margemRodape)/210);
@@ -226,6 +237,11 @@
         ctx.fillStyle='#fff';ctx.fillRect(0,0,parte.width,parte.height);
         ctx.drawImage(canvas,0,inicio,canvas.width,altura,0,margemTopo*px,canvas.width,altura);
         desenhar(cabecalho,14,196,3,20);
+        if(arteModelo){
+          const fator=Math.min(182*px/arteModelo.width,26*px/arteModelo.height);
+          const largura=arteModelo.width*fator;
+          ctx.drawImage(arteModelo,(parte.width-largura)/2,4*px,largura,arteModelo.height*fator);
+        }
         desenhar(rodape,14,196,277,294);
         ctx.globalAlpha=identidade.opacidade;
         for(const posicao of identidade.posicoes){
@@ -235,6 +251,13 @@
         if(pagina++)pdf.addPage();
         pdf.addImage(parte.toDataURL('image/jpeg',.94),'JPEG',0,0,210,297);
         inicio+=altura;
+      }
+      if(arteModelo){
+        pdf.setFontSize(9);
+        for(let folha=1;folha<=pagina;folha++){
+          pdf.setPage(folha);
+          pdf.text('Página '+folha+'/'+pagina,196,33,{align:'right'});
+        }
       }
       return pdf.output('blob');
     }finally{iframe.remove();}

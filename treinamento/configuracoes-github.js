@@ -77,6 +77,12 @@
           <label>Opacidade da marca-d'água (%)<input id="cfgMarcaOpacidade" type="number" min="5" max="30" step="1" value="${Math.round(Number(c?.marca_dagua_opacidade??0.12)*100)}"></label>
           <label>Posição da marca-d'água<select id="cfgMarcaPosicao"><option value="laterais" ${(c?.marca_dagua_posicao||'laterais')==='laterais'?'selected':''}>Laterais (modelo timbrado)</option><option value="centro" ${c?.marca_dagua_posicao==='centro'?'selected':''}>Centro</option><option value="esquerda" ${c?.marca_dagua_posicao==='esquerda'?'selected':''}>Esquerda</option><option value="direita" ${c?.marca_dagua_posicao==='direita'?'selected':''}>Direita</option></select></label>
         </div>
+        <h3>Cabeçalho dos relatórios</h3>
+        <label>Modelo<select id="cfgModeloCabecalho"><option value="">Padrão atual</option><option value="simples">Simples</option><option value="tabela">Tabela institucional</option><option value="imagem">Imagem personalizada</option></select></label>
+        <details id="cfgDetalhesCabecalho"><summary>Editar campos, títulos e códigos</summary>
+          <p>Deixe um rótulo em branco para ocultar a coluna. Os títulos em branco usam o nome padrão do relatório.</p>
+          <div id="cfgCamposCabecalho" class="grid-form"></div>
+        </details>
         <div id="previewIdentidade" style="margin-top:18px;border:1px solid #dde6e3;border-radius:12px;padding:16px;min-height:100px"></div>
       </div>
 
@@ -121,6 +127,31 @@
       </div>`;
   }
 
+  function preencherCabecalho(config = {}) {
+    const $ = id => document.getElementById(id);
+    $('cfgModeloCabecalho').value = config?.modelo || '';
+    const {camposCabecalho, tiposRelatorio} = IdentidadeRelatorios;
+    $('cfgCamposCabecalho').innerHTML = camposCabecalho.map(([id, nome]) =>
+      `<label>Rótulo de ${nome}<input data-rotulo="${id}" value="${esc(config?.rotulos?.[id] ?? nome)}"></label>
+       ${id === 'data' ? '<span>Data preenchida na geração do relatório</span>' :
+       `<label>Valor de ${nome}<input data-valor="${id}" value="${esc(config?.valores?.[id] ?? '')}"></label>`}`
+    ).join('') + tiposRelatorio.map(([id,nome]) =>
+      `<label>Título · ${nome}<input data-titulo="${id}" value="${esc(config?.relatorios?.[id]?.titulo ?? '')}" placeholder="${esc(nome)}"></label>
+       <label>Código · ${nome}<input data-codigo="${id}" value="${esc(config?.relatorios?.[id]?.codigo ?? '')}"></label>`
+    ).join('');
+  }
+
+  function lerCabecalho() {
+    const modelo = document.getElementById('cfgModeloCabecalho').value;
+    if (!modelo) return null;
+    const campos = document.getElementById('cfgCamposCabecalho');
+    const valores = atributo => Object.fromEntries([...campos.querySelectorAll('[data-'+atributo+']')].map(
+      input => [input.dataset[atributo], input.value.trim()]));
+    const titulos = valores('titulo'), codigos = valores('codigo');
+    return {modelo, rotulos:valores('rotulo'), valores:valores('valor'),
+      relatorios:Object.fromEntries(Object.keys(titulos).map(id => [id,{titulo:titulos[id],codigo:codigos[id]}]))};
+  }
+
   function atualizarPreview(){
     const box=document.getElementById('previewIdentidade'); if(!box)return;
     const logo=document.getElementById('cfgLogo').value.trim();
@@ -130,6 +161,13 @@
     const op=Math.min(30,Math.max(5,Number(document.getElementById('cfgMarcaOpacidade').value||12)))/100;
     const nome=document.getElementById('cfgNome').value.trim()||'Nome da empresa';
     const sub=document.getElementById('cfgSubtitulo').value.trim();
+    const config=lerCabecalho();
+    document.getElementById('cfgDetalhesCabecalho').hidden=!config;
+    const modelo=IdentidadeRelatorios.cabecalhoHTML({cabecalho_config:config,cabecalho_url:cabecalho,logo_url:logo},'visita-campo','Relatório de Visita Técnica');
+    if(modelo){
+      box.innerHTML=modelo+'<div style="text-align:right;font:11px Arial">Página 1/1</div>';
+      return;
+    }
     box.innerHTML=`<div style="position:relative;overflow:hidden;min-height:130px">${cabecalho?`<img src="${esc(urlImagem(cabecalho))}" alt="Cabeçalho" style="display:block;width:100%;max-height:75px;object-fit:contain;margin-bottom:10px" onerror="this.style.display='none'">`:''}<div style="position:relative;z-index:1;display:flex;gap:18px;align-items:center">${logo?`<img src="${esc(urlImagem(logo))}" alt="Logo" style="max-width:180px;max-height:80px;object-fit:contain" onerror="this.style.display='none'">`:'<div style="width:130px;height:60px;border:1px dashed #b8c4c0;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#89938f">LOGO</div>'}<div><strong style="font-size:20px">${esc(nome)}</strong>${sub?`<div style="margin-top:5px;color:#6c757d">${esc(sub)}</div>`:''}</div></div>${rodape?`<div style="margin-top:16px;padding-top:12px;border-top:1px solid #dde6e3"><img src="${esc(urlImagem(rodape))}" alt="Rodapé" style="width:100%;max-height:100px;object-fit:contain;object-position:left center" onerror="this.style.display='none'"></div>`:''}</div>${marca?`<div style="position:absolute;inset:0;pointer-events:none;opacity:${op};background-image:url('${esc(urlImagem(marca))}');background-size:contain;background-position:center;background-repeat:no-repeat"></div>`:''}`;
   }
 
@@ -169,6 +207,7 @@
       subtitulo:document.getElementById('cfgSubtitulo').value.trim()||null,
       logo_url:document.getElementById('cfgLogo').value.trim()||null,
       cabecalho_url:document.getElementById('cfgCabecalho').value.trim()||null,
+      cabecalho_config:lerCabecalho(),
       rodape_url:document.getElementById('cfgRodape').value.trim()||null,
       marca_dagua_url:document.getElementById('cfgMarcaDagua').value.trim()||null,
       marca_dagua_opacidade:Math.min(30,Math.max(5,Number(document.getElementById('cfgMarcaOpacidade').value||12)))/100,
@@ -188,6 +227,11 @@
         await supabaseFetch('empresa_configuracao?select=cabecalho_url&limit=1');
       }else if(!registro || !Object.hasOwn(registro,'cabecalho_url')){
         delete dados.cabecalho_url;
+      }
+      if(dados.cabecalho_config){
+        await supabaseFetch('empresa_configuracao?select=cabecalho_config&limit=1');
+      }else if(!registro || !Object.hasOwn(registro,'cabecalho_config')){
+        delete dados.cabecalho_config;
       }
       let retorno;
       await supabaseFetch('empresa_configuracao?emissora_ativa=eq.true&empresa_id=neq.'+encodeURIComponent(empresaId),{method:'PATCH',body:JSON.stringify({emissora_ativa:false,atualizado_em:new Date().toISOString()})});
@@ -236,6 +280,7 @@
         document.getElementById('cfgEndereco').value=empresaSelecionada?.endereco||'';
         document.getElementById('cfgCor').value=conf?.cor_principal||'#0b8f43';
         document.getElementById('cfgLogo').value=conf?.logo_url||'';
+        preencherCabecalho(conf?.cabecalho_config);
         document.getElementById('cfgCabecalho').value=conf?.cabecalho_url||'';
         document.getElementById('cfgRodape').value=conf?.rodape_url||'';
         document.getElementById('cfgMarcaDagua').value=conf?.marca_dagua_url||'';
@@ -251,7 +296,9 @@
         atualizarPreview();
         atualizarPreviewAssinatura();
       };
-      ['cfgNome','cfgSubtitulo','cfgLogo','cfgCabecalho','cfgRodape','cfgMarcaDagua','cfgMarcaOpacidade','cfgMarcaPosicao'].forEach(id=>document.getElementById(id).addEventListener('input',atualizarPreview));
+      preencherCabecalho(registro?.cabecalho_config);
+      document.getElementById('cfgCamposCabecalho').oninput=atualizarPreview;
+      ['cfgModeloCabecalho','cfgNome','cfgSubtitulo','cfgLogo','cfgCabecalho','cfgRodape','cfgMarcaDagua','cfgMarcaOpacidade','cfgMarcaPosicao'].forEach(id=>document.getElementById(id).addEventListener('input',atualizarPreview));
       document.getElementById('cfgCertModelo').onchange=atualizarCamposCertificado;
       document.getElementById('cfgAssTam').oninput=atualizarPreviewAssinatura;
       document.getElementById('cfgAssOp').oninput=atualizarPreviewAssinatura;
