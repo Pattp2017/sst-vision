@@ -189,6 +189,8 @@
       .sst-timbre-previa { display:block; width:100%; max-height:17mm; object-fit:contain }
       .sst-marca-previa { position:absolute; top:50%; max-width:42%; max-height:110mm;
         transform:translate(-50%, -50%); pointer-events:none; z-index:0 }
+      .sst-marca-previa.sst-marca-folha { left:50%!important; top:0; width:100%; max-width:100%;
+        height:auto; max-height:none; transform:translateX(-50%); mix-blend-mode:multiply }
       @media print {
         @page { margin:${cabecalho ? 37 : m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
           ${topo ? `@top-center { content:url(${cssString(topo)}); width:181.8mm; vertical-align:top; padding-top:3mm; }` : ''}
@@ -204,6 +206,8 @@
         .sst-timbre-marca { top:66mm; width:75mm; height:108mm;
           object-fit:contain; transform:translateX(-50%); z-index:200;
           print-color-adjust:exact; -webkit-print-color-adjust:exact }
+        .sst-timbre-marca.sst-marca-folha { left:0!important; top:0; width:100%; height:225mm;
+          transform:none; mix-blend-mode:multiply }
       }`;
     estilo.textContent = css('');
     doc.head.append(estilo);
@@ -219,6 +223,7 @@
       if (estilo.isConnected) estilo.textContent = css(rodape, topo);
     });
     const imagens = [];
+    const marcasProntas = [];
     function adicionar(pai, classe, url, texto) {
       const elemento = doc.createElement(url ? 'img' : 'div');
       elemento.className = classe;
@@ -243,6 +248,7 @@
       previa.append(rodape);
     }
     if (m.marca) {
+      const porCamada = new Map();
       for (const posicao of m.posicoes) {
         const esquerda = posicao === 5 ? 21 : posicao === 95 ? 79 : 50;
         for (const [pai, classe] of [[doc.body, 'sst-timbre-impressao sst-timbre-marca'], [previa, 'sst-marca-previa']]) {
@@ -250,11 +256,23 @@
           const marca = adicionar(pai, classe, m.marca);
           marca.style.left = esquerda + '%';
           marca.style.opacity = m.opacidade;
+          if (!porCamada.has(pai)) porCamada.set(pai, []);
+          porCamada.get(pai).push(marca);
+        }
+      }
+      if (m.posicoes.length === 2) {
+        for (const [primeira, segunda] of porCamada.values()) {
+          marcasProntas.push(primeira.decode().then(() => {
+            const proporcao = primeira.naturalWidth / primeira.naturalHeight;
+            if (proporcao < .68 || proporcao > .74) return;
+            primeira.classList.add('sst-marca-folha');
+            segunda.remove();
+          }));
         }
       }
     }
     const preparo = Promise.race([
-      Promise.allSettled([preparoMargens, ...imagens.map(img => img.decode())]),
+      Promise.allSettled([preparoMargens, ...imagens.map(img => img.decode()), ...marcasProntas]),
       new Promise(resolve => setTimeout(resolve, 5000))
     ]);
     return {imagens, preparo};
