@@ -1,0 +1,102 @@
+:host {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: 30;
+  box-sizing: border-box;
+  width: var(--sst-sidebar-width);
+  overflow-y: auto;
+  padding: 18px 12px;
+  background: #132c30;
+  color: #c1d1d3;
+  font: 13px/1.4 'DM Sans', Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+a, button { color: inherit; text-decoration: none; }
+button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+a:focus-visible, button:focus-visible {
+  outline: 2px solid #81cba3;
+  outline-offset: -2px;
+}
+.icon { width: 19px; height: 19px; flex: none; }
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 6px;
+  margin-bottom: 58px;
+  color: #f5ffff;
+  font-size: 20px;
+  letter-spacing: -.4px;
+}
+.brand b { color: #a3d9c9; font-weight: 450; }
+.brand small {
+  display: block;
+  margin-top: 5px;
+  color: #9bb7ba;
+  font-size: 9px;
+  letter-spacing: .15px;
+}
+.brand-mark {
+  display: grid;
+  flex: 0 0 38px;
+  place-items: center;
+  height: 43px;
+  border-radius: 12px;
+  background: #28755f;
+  color: #d0f1d7;
+}
+.brand-mark .icon { width: 26px; height: 26px; }
+.label {
+  padding: 0 14px;
+  margin-bottom: 10px;
+  color: #9bb7ba;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 1.3px;
+}
+nav { display: grid; gap: 6px; }
+nav a, nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 9px;
+}
+nav a:hover, nav button:hover { background: #214044; color: white; }
+nav [aria-current], nav [aria-expanded="true"] {
+  background: #244c47;
+  color: #d5f5e8;
+  box-shadow: inset 3px 0 #81cba3;
+}
+.chevron {
+  width: 7px;
+  height: 7px;
+  margin-left: auto;
+  border: solid currentColor;
+  border-width: 0 1px 1px 0;
+  transform: rotate(45deg);
+}
+[aria-expanded="true"] .chevron { transform: rotate(225deg); }
+.tree { margin: 1px 0 0 22px; padding-left: 8px; border-left: 1px solid #416166; }
+.tree a { min-height: 38px; padding: 8px 10px; }
+.mobile { display: none; }
+[hidden] { display: none; }
+@media (max-width: 760px) {
+  :host { position: relative; inset: auto; display: block; width: 100%; }
+  .heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .brand { margin: 0; }
+  .mobile { display: block; padding: 12px; border: 1px solid #416166; border-radius: 8px; }
+  nav { display: none; margin-top: 16px; }
+  nav.mobile-open { display: grid; }
+}
+@media print {
+  :host { display: none; }
+}

@@ -1,0 +1,15 @@
+body.sst-navigation-page {
+  --sst-sidebar-width: 242px;
+  margin-inline-start: var(--sst-sidebar-width);
+  width: auto;
+}
+body.sst-navigation-page .sst-shared-workspace {
+  margin-inline-start: 0;
+  width: 100%;
+}
+@media (max-width: 1120px) {
+  body.sst-navigation-page { --sst-sidebar-width: 210px; }
+}
+@media (max-width: 760px), print {
+  body.sst-navigation-page { --sst-sidebar-width: 0px; }
+}
