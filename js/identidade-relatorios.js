@@ -169,7 +169,9 @@
       canvas.width = Math.min(900, arte.width);
       canvas.height = Math.round(arte.height * canvas.width / arte.width);
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(arte, 0, 0, canvas.width, canvas.height);
+      // Avança 2 mm em cada lateral sem mudar a escala vertical da folha.
+      const ajusteLateral = canvas.width * 2 / 210;
+      ctx.drawImage(arte, -ajusteLateral, 0, canvas.width + 2 * ajusteLateral, canvas.height);
       const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const rgba = pixels.data;
       const cantos = [0, (canvas.width - 1) * 4, rgba.length - canvas.width * 4, rgba.length - 4];
