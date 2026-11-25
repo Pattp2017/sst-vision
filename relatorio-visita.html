@@ -169,6 +169,7 @@ function faixaFotos(inicio, quantidade){
  const numeros=Array.from({length:quantidade},(_,i)=>String(inicio+i).padStart(2,'0'));
  return numeros.length===1?numeros[0]:numeros[0]+' a '+numeros[numeros.length-1];
 }
+let preparoImpressao=Promise.resolve();
 function preview(){
  const v=snapshot().campos;
  const escStatus={C:'Conforme',NC:'Não conforme',P:'Pendente',NA:'Não aplicável'};
@@ -222,7 +223,7 @@ function preview(){
   const secFinal='<section class="report-section"><h2>5. Considerações finais</h2>'+conclusaoTexto+'</section>';
   $('previa').innerHTML=base+'<div class="rv-campo">'+secObjetivo+secAtividades+secNC+secFotos+secFinal+'</div>'+proxima+rodapeHTML;
  }
- IdentidadeRelatorios.inserir(document, identidade, {previa:$('previa'), rodapePadrao:identidade.nome_exibicao||'RG Certe'});
+ preparoImpressao=IdentidadeRelatorios.inserir(document, identidade, {previa:$('previa'), rodapePadrao:identidade.nome_exibicao||'RG Certe'}).preparo;
 
 }
 
@@ -381,7 +382,7 @@ $('conclusao').addEventListener('input',()=>{$('conclusao').dataset.editadoManua
   botao.disabled=false;
   botao.textContent='Atualizar dados do checklist';
  }
-};$('adicionar').onclick=()=>{sync();addItem()};$('visualizar').onclick=melhorarComIA;$('previaSimples').onclick=preview;$('aceitarIA').onclick=aplicarSugestoes;$('descartarIA').onclick=()=>{esconderRevisao();preview()};$('salvar').onclick=()=>{try{localStorage.setItem(KEY,JSON.stringify(snapshot()));alert('Rascunho salvo neste dispositivo.')}catch(e){alert('Falha ao salvar: '+e.message)}};$('pdf').onclick=()=>{if(qs.get('vistoria_id')&&!dadosChecklist.length){alert('Não há itens do checklist carregados. Confirme o salvamento no Supabase e atualize os dados antes de emitir o PDF.');return}if(!$('hora_fim').value){const agora=new Date();$('hora_fim').value=[agora.getHours(),agora.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':')}try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}catch(e){console.warn('Não foi possível salvar os horários:',e)}preview();window.print()};
+};$('adicionar').onclick=()=>{sync();addItem()};$('visualizar').onclick=melhorarComIA;$('previaSimples').onclick=preview;$('aceitarIA').onclick=aplicarSugestoes;$('descartarIA').onclick=()=>{esconderRevisao();preview()};$('salvar').onclick=()=>{try{localStorage.setItem(KEY,JSON.stringify(snapshot()));alert('Rascunho salvo neste dispositivo.')}catch(e){alert('Falha ao salvar: '+e.message)}};$('pdf').onclick=async()=>{if(qs.get('vistoria_id')&&!dadosChecklist.length){alert('Não há itens do checklist carregados. Confirme o salvamento no Supabase e atualize os dados antes de emitir o PDF.');return}if(!$('hora_fim').value){const agora=new Date();$('hora_fim').value=[agora.getHours(),agora.getMinutes()].map(n=>String(n).padStart(2,'0')).join(':')}try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}catch(e){console.warn('Não foi possível salvar os horários:',e)}preview();await preparoImpressao;window.print()};
 for(const status of ['C','P','NA'])$('exibir'+status).addEventListener('change',()=>{preview();try{localStorage.setItem(KEY,JSON.stringify(snapshot()))}catch(e){console.warn('Não foi possível salvar as opções do relatório:',e)}});
 init();
 </script></body></html>
