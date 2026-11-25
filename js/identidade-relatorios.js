@@ -160,6 +160,33 @@
     return tela.toDataURL('image/png');
   }
 
+  async function prepararMarcaDeFolha(doc, url) {
+    const resposta = await fetch(url, {signal: AbortSignal.timeout(4000)});
+    if (!resposta.ok) return '';
+    const arte = await createImageBitmap(await resposta.blob());
+    try {
+      const canvas = doc.createElement('canvas');
+      canvas.width = Math.min(900, arte.width);
+      canvas.height = Math.round(arte.height * canvas.width / arte.width);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(arte, 0, 0, canvas.width, canvas.height);
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const rgba = pixels.data;
+      const cantos = [0, (canvas.width - 1) * 4, rgba.length - canvas.width * 4, rgba.length - 4];
+      // PNGs já transparentes ou com fundo colorido mantêm a arte original.
+      if (!cantos.every(i => rgba[i + 3] >= 250 && Math.min(rgba[i], rgba[i + 1], rgba[i + 2]) >= 246)) return '';
+      for (let i = 0; i < rgba.length; i += 4) {
+        const tom = (rgba[i] * 0.2126 + rgba[i + 1] * 0.7152 + rgba[i + 2] * 0.0722);
+        rgba[i + 3] *= Math.min(1, Math.max(0, (250 - tom) / 36));
+        rgba[i] = rgba[i + 1] = rgba[i + 2] = 0;
+      }
+      ctx.putImageData(pixels, 0, 0);
+      return canvas.toDataURL('image/png');
+    } finally {
+      arte.close();
+    }
+  }
+
   function inserir(doc, identidade, {previa, rodapePadrao, tipo, titulo = doc.title, tituloExistente} = {}) {
     const m = marcas(identidade);
     const cabecalho = cabecalhoHTML(identidade, tipo, titulo);
@@ -190,7 +217,7 @@
       .sst-marca-previa { position:absolute; top:50%; max-width:42%; max-height:110mm;
         transform:translate(-50%, -50%); pointer-events:none; z-index:0 }
       .sst-marca-previa.sst-marca-folha { left:50%!important; top:0; width:100%; max-width:100%;
-        height:auto; max-height:none; transform:translateX(-50%); mix-blend-mode:multiply }
+        height:auto; max-height:none; transform:translateX(-50%) }
       @media print {
         @page { margin:${cabecalho ? 37 : m.cabecalho ? 24 : 14}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
           ${topo ? `@top-center { content:url(${cssString(topo)}); width:181.8mm; vertical-align:top; padding-top:3mm; }` : ''}
@@ -207,7 +234,7 @@
           object-fit:contain; transform:translateX(-50%); z-index:200;
           print-color-adjust:exact; -webkit-print-color-adjust:exact }
         .sst-timbre-marca.sst-marca-folha { left:0!important; top:0; width:100%; height:225mm;
-          transform:none; mix-blend-mode:multiply }
+          transform:none }
       }`;
     estilo.textContent = css('');
     doc.head.append(estilo);
@@ -261,10 +288,20 @@
         }
       }
       if (m.posicoes.length === 2) {
+        let artePreparada;
         for (const [primeira, segunda] of porCamada.values()) {
-          marcasProntas.push(primeira.decode().then(() => {
+          marcasProntas.push(primeira.decode().then(async () => {
             const proporcao = primeira.naturalWidth / primeira.naturalHeight;
             if (proporcao < .68 || proporcao > .74) return;
+            artePreparada ||= prepararMarcaDeFolha(doc, m.marca).catch(() => '');
+            const dados = await artePreparada;
+            if (!primeira.isConnected) return;
+            if (dados) {
+              primeira.src = dados;
+              await primeira.decode();
+            } else {
+              primeira.style.mixBlendMode = 'multiply';
+            }
             primeira.classList.add('sst-marca-folha');
             segunda.remove();
           }));
