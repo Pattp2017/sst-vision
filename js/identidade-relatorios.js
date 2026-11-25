@@ -239,8 +239,8 @@
       .sst-timbre-previa { display:block; width:100%; max-height:17mm; object-fit:contain }
       .sst-marca-previa { position:absolute; top:50%; max-width:42%; max-height:110mm;
         transform:translate(-50%, -50%); pointer-events:none; z-index:0 }
-      .sst-marca-previa.sst-marca-folha { left:50%!important; top:0; width:100%; max-width:100%;
-        height:auto; aspect-ratio:210 / 297; max-height:none; transform:translateX(-50%) }
+      .sst-marca-previa.sst-marca-folha { display:none }
+      .sst-aviso-marca { margin:0 0 10px; color:#475569; font:12px Arial }
       @media print {
         @page { margin:${margemSuperior}mm 14mm ${margemInferior}mm; ${rodapePaginado(imagemImpressao)}
           ${topo ? `@top-center { content:url(${cssString(topo)}); width:181.8mm; vertical-align:top; padding-top:3mm; }` : ''}
@@ -250,7 +250,7 @@
         }
         .sst-cab-modelo-previa { display:none!important }
         ${topo && tituloExistente ? `${tituloExistente} { display:none!important }` : ''}
-        .sst-timbre-previa,.sst-marca-previa { display:none!important }
+        .sst-timbre-previa,.sst-marca-previa,.sst-aviso-marca { display:none!important }
         .sst-timbre-impressao { display:block; position:fixed; pointer-events:none }
         .sst-timbre-topo { left:0; width:100%; height:17mm;
           object-fit:contain; z-index:101 }
@@ -340,6 +340,10 @@
             }
             primeira.classList.add('sst-marca-folha');
             segunda.remove();
+            if (pai === previa) {
+              adicionar(previa, 'sst-aviso-marca', '',
+                'A marca-d’água de folha inteira aparece na prévia de impressão.');
+            }
           }));
         }
       }
