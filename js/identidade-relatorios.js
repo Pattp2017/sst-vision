@@ -160,7 +160,7 @@
     return tela.toDataURL('image/png');
   }
 
-  async function prepararMarcaDeFolha(doc, url) {
+  async function prepararMarcaDeFolha(doc, url, opacidade) {
     const resposta = await fetch(url, {signal: AbortSignal.timeout(4000)});
     if (!resposta.ok) return '';
     const arte = await createImageBitmap(await resposta.blob());
@@ -174,11 +174,14 @@
       const rgba = pixels.data;
       const cantos = [0, (canvas.width - 1) * 4, rgba.length - canvas.width * 4, rgba.length - 4];
       // PNGs já transparentes ou com fundo colorido mantêm a arte original.
-      if (!cantos.every(i => rgba[i + 3] >= 250 && Math.min(rgba[i], rgba[i + 1], rgba[i + 2]) >= 246)) return '';
+      const fundoBranco = cantos.every(i => rgba[i + 3] >= 250 && Math.min(rgba[i], rgba[i + 1], rgba[i + 2]) >= 246);
       for (let i = 0; i < rgba.length; i += 4) {
         const tom = (rgba[i] * 0.2126 + rgba[i + 1] * 0.7152 + rgba[i + 2] * 0.0722);
-        rgba[i + 3] *= Math.min(1, Math.max(0, (250 - tom) / 36));
-        rgba[i] = rgba[i + 1] = rgba[i + 2] = 0;
+        if (fundoBranco) {
+          rgba[i + 3] *= Math.min(1, Math.max(0, (250 - tom) / 36));
+          rgba[i] = rgba[i + 1] = rgba[i + 2] = 0;
+        }
+        rgba[i + 3] *= opacidade;
       }
       ctx.putImageData(pixels, 0, 0);
       return canvas.toDataURL('image/png');
@@ -212,6 +215,8 @@
         ${m.rodape && !imagemImpressao ? `background:url(${cssString(m.rodape)}) center / contain no-repeat;` : ''}
       }` : '';
     const margemSuperior = cabecalho ? 37 : m.cabecalho ? 24 : 14;
+    let arteFolha, arteRodape, arteTopo;
+    const atualizarCSS = () => { if (estilo.isConnected) estilo.textContent = css(arteRodape, arteTopo); };
     const css = (imagemImpressao, topo) => `
       .sst-timbre-impressao { display:none }
       .sst-timbre-previa { display:block; width:100%; max-height:17mm; object-fit:contain }
@@ -223,6 +228,8 @@
         @page { margin:${margemSuperior}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
           ${topo ? `@top-center { content:url(${cssString(topo)}); width:181.8mm; vertical-align:top; padding-top:3mm; }` : ''}
           ${topo ? paginacao : ''}
+          ${arteFolha ? `background: url(${cssString(arteFolha)}) top left / 210mm 297mm no-repeat;
+            print-color-adjust:exact; -webkit-print-color-adjust:exact;` : ''}
         }
         .sst-cab-modelo-previa { display:none!important }
         ${topo && tituloExistente ? `${tituloExistente} { display:none!important }` : ''}
@@ -234,6 +241,7 @@
         .sst-timbre-marca { top:66mm; width:75mm; height:108mm;
           object-fit:contain; transform:translateX(-50%); z-index:200;
           print-color-adjust:exact; -webkit-print-color-adjust:exact }
+        ${arteFolha ? ".sst-timbre-marca.sst-marca-folha { display:none!important }" : ""}
         .sst-timbre-marca.sst-marca-folha {
           left:-14mm!important; top:-${margemSuperior}mm;
           width:210mm; height:297mm; max-width:none; max-height:none;
@@ -251,7 +259,9 @@
         img.src = dados;
         return img.decode();
       }));
-      if (estilo.isConnected) estilo.textContent = css(rodape, topo);
+      arteRodape = rodape;
+      arteTopo = topo;
+      atualizarCSS();
     });
     const imagens = [];
     const marcasProntas = [];
@@ -297,12 +307,15 @@
           marcasProntas.push(primeira.decode().then(async () => {
             const proporcao = primeira.naturalWidth / primeira.naturalHeight;
             if (proporcao < .68 || proporcao > .74) return;
-            artePreparada ||= prepararMarcaDeFolha(doc, m.marca).catch(() => '');
+            artePreparada ||= prepararMarcaDeFolha(doc, m.marca, m.opacidade).catch(() => '');
             const dados = await artePreparada;
             if (!primeira.isConnected) return;
             if (dados) {
               primeira.src = dados;
+              primeira.style.opacity = '1';
               await primeira.decode();
+              arteFolha = dados;
+              atualizarCSS();
             } else {
               primeira.style.mixBlendMode = 'multiply';
             }
