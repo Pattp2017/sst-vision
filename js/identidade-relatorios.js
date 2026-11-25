@@ -201,12 +201,13 @@
         .sst-timbre-topo { left:0; width:100%; height:17mm;
           object-fit:contain; z-index:101 }
         .sst-timbre-topo { top:-21mm }
-        .sst-timbre-marca { top:50%; max-width:42%; max-height:110mm;
-          transform:translate(-50%, -50%); z-index:100 }
+        .sst-timbre-marca { top:66mm; width:75mm; height:108mm;
+          object-fit:contain; transform:translateX(-50%); z-index:200;
+          print-color-adjust:exact; -webkit-print-color-adjust:exact }
       }`;
     estilo.textContent = css('');
     doc.head.append(estilo);
-    const preparo = Promise.all([
+    const preparoMargens = Promise.all([
       prepararRodape(m.rodape),
       cabecalho ? imagemCabecalho(doc, cabecalho).catch(() => '') : ''
     ]).then(async ([rodape, topo]) => {
@@ -252,16 +253,17 @@
         }
       }
     }
+    const preparo = Promise.race([
+      Promise.allSettled([preparoMargens, ...imagens.map(img => img.decode())]),
+      new Promise(resolve => setTimeout(resolve, 5000))
+    ]);
     return {imagens, preparo};
   }
 
   async function imprimir(janela = window, opcoes) {
     const identidade = await carregar();
-    const {imagens, preparo} = inserir(janela.document, identidade, opcoes);
-    await Promise.race([
-      Promise.allSettled([...imagens.map(img => img.decode()), preparo]),
-      new Promise(resolve => setTimeout(resolve, 4500))
-    ]);
+    const {preparo} = inserir(janela.document, identidade, opcoes);
+    await preparo;
     try { janela.print(); } finally {
       janela.document.querySelectorAll('[data-identidade-relatorio]').forEach(el => el.remove());
     }
