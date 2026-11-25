@@ -173,7 +173,7 @@
       const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const rgba = pixels.data;
       const cantos = [0, (canvas.width - 1) * 4, rgba.length - canvas.width * 4, rgba.length - 4];
-      // PNGs já transparentes ou com fundo colorido mantêm a arte original.
+      // Remove o branco da arte timbrada. PNGs transparentes mantêm as cores.
       const fundoBranco = cantos.every(i => rgba[i + 3] >= 250 && Math.min(rgba[i], rgba[i + 1], rgba[i + 2]) >= 246);
       for (let i = 0; i < rgba.length; i += 4) {
         const tom = (rgba[i] * 0.2126 + rgba[i + 1] * 0.7152 + rgba[i + 2] * 0.0722);
@@ -215,21 +215,38 @@
         ${m.rodape && !imagemImpressao ? `background:url(${cssString(m.rodape)}) center / contain no-repeat;` : ''}
       }` : '';
     const margemSuperior = cabecalho ? 37 : m.cabecalho ? 24 : 14;
-    let arteFolha, arteRodape, arteTopo;
+    const margemInferior = m.rodape || rodapePadrao ? 23 : 14;
+    let laterais, arteRodape, arteTopo;
     const atualizarCSS = () => { if (estilo.isConnected) estilo.textContent = css(arteRodape, arteTopo); };
+    async function recortarLaterais(dados) {
+      const img = new Image();
+      img.src = dados;
+      await img.decode();
+      const faixa = doc.createElement('canvas');
+      faixa.width = Math.floor(14 * 96 / 25.4);
+      faixa.height = Math.floor((297 - margemSuperior - margemInferior) * 96 / 25.4);
+      const ctx = faixa.getContext('2d');
+      const altura = img.height * (297 - margemSuperior - margemInferior) / 297;
+      const largura = img.width * 14 / 210;
+      return [0, img.width - largura].map(x => {
+        ctx.clearRect(0, 0, faixa.width, faixa.height);
+        ctx.drawImage(img, x, img.height * margemSuperior / 297, largura, altura, 0, 0, faixa.width, faixa.height);
+        return faixa.toDataURL('image/png');
+      });
+    }
     const css = (imagemImpressao, topo) => `
       .sst-timbre-impressao { display:none }
       .sst-timbre-previa { display:block; width:100%; max-height:17mm; object-fit:contain }
       .sst-marca-previa { position:absolute; top:50%; max-width:42%; max-height:110mm;
         transform:translate(-50%, -50%); pointer-events:none; z-index:0 }
       .sst-marca-previa.sst-marca-folha { left:50%!important; top:0; width:100%; max-width:100%;
-        height:auto; max-height:none; transform:translateX(-50%) }
+        height:auto; aspect-ratio:210 / 297; max-height:none; transform:translateX(-50%) }
       @media print {
-        @page { margin:${margemSuperior}mm 14mm ${m.rodape || rodapePadrao ? 23 : 14}mm; ${rodapePaginado(imagemImpressao)}
+        @page { margin:${margemSuperior}mm 14mm ${margemInferior}mm; ${rodapePaginado(imagemImpressao)}
           ${topo ? `@top-center { content:url(${cssString(topo)}); width:181.8mm; vertical-align:top; padding-top:3mm; }` : ''}
           ${topo ? paginacao : ''}
-          ${arteFolha ? `background: url(${cssString(arteFolha)}) top left / 210mm 297mm no-repeat;
-            print-color-adjust:exact; -webkit-print-color-adjust:exact;` : ''}
+          ${laterais ? `@left-middle { content:url(${cssString(laterais[0])}); vertical-align:top; text-align:left; }
+            @right-middle { content:url(${cssString(laterais[1])}); vertical-align:top; text-align:right; }` : ''}
         }
         .sst-cab-modelo-previa { display:none!important }
         ${topo && tituloExistente ? `${tituloExistente} { display:none!important }` : ''}
@@ -241,11 +258,11 @@
         .sst-timbre-marca { top:66mm; width:75mm; height:108mm;
           object-fit:contain; transform:translateX(-50%); z-index:200;
           print-color-adjust:exact; -webkit-print-color-adjust:exact }
-        ${arteFolha ? ".sst-timbre-marca.sst-marca-folha { display:none!important }" : ""}
         .sst-timbre-marca.sst-marca-folha {
           left:-14mm!important; top:-${margemSuperior}mm;
           width:210mm; height:297mm; max-width:none; max-height:none;
-          object-fit:fill; transform:none
+          object-fit:fill; transform:none;
+          ${laterais ? 'clip-path:inset(' + margemSuperior + 'mm 14mm ' + margemInferior + 'mm)' : ''}
         }
       }`;
     estilo.textContent = css('');
@@ -314,8 +331,10 @@
               primeira.src = dados;
               primeira.style.opacity = '1';
               await primeira.decode();
-              arteFolha = dados;
-              atualizarCSS();
+              if (pai === doc.body) {
+                laterais = await recortarLaterais(dados).catch(() => null);
+                atualizarCSS();
+              }
             } else {
               primeira.style.mixBlendMode = 'multiply';
             }
