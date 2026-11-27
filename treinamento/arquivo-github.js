@@ -1,5 +1,8 @@
 (() => {
   function limparNome(v){return String(v||'arquivo').normalize('NFC').replace(/[<>:"/\\|?*\x00-\x1F]/g,' ').replace(/[. ]+$/g,'').replace(/\s+/g,' ').trim()||'arquivo';}
+  function nomePdfListaPresenca(turma,nomePadrao){
+    return limparNome(String(turma.apelido||'').trim()||nomePadrao)+'.pdf';
+  }
   async function gravar(dir,nome,blob){const arq=await dir.getFileHandle(limparNome(nome),{create:true});let w;try{w=await arq.createWritable();await w.write(blob);await w.close();}catch(e){try{await w?.abort();}catch(_){}if(e?.name==='InvalidStateError')throw new Error('O arquivo está aberto ou bloqueado. Feche PDFs/arquivos desta pasta e tente novamente.');throw e;}}
   async function htmlListaParaPdf(html){
     const JsPDF=window.jspdf?.jsPDF||window.jsPDF,renderCanvas=window.html2canvas;
@@ -334,7 +337,7 @@
       progresso('Gerando lista de presença...');
       const pastaLista=await raiz.getDirectoryHandle('01) Lista de Presença',{create:true});
       const pdfLista=await htmlListaParaPdf(lista.html);
-      await gravar(pastaLista,limparNome(nomeTreinamento)+'.pdf',pdfLista);
+      await gravar(pastaLista,nomePdfListaPresenca(lista.turma,nomeTreinamento),pdfLista);
       if(lista.ehIT12&&lista.htmlAtestadoIT12){
         progresso('Gerando atestado IT 12...');
         const pastaIT12=await raiz.getDirectoryHandle('04) IT 12',{create:true});
@@ -372,7 +375,7 @@
       const atualizarStatus=(mensagem)=>{statusArquivo.innerHTML='<strong>'+nomeTreinamento+'</strong><br>'+mensagem;};
       atualizarStatus('Gerando lista de presença...');
       const pdfLista=await htmlListaParaPdf(lista.html);
-      await gravar(pastaLista,limparNome(lista.turma.treinamento||'Lista de Presença')+'.pdf',pdfLista);
+      await gravar(pastaLista,nomePdfListaPresenca(lista.turma,lista.turma.treinamento||'Lista de Presença'),pdfLista);
       atualizarStatus('Gerando termos de uso de imagem...');
       await salvarTermosImagem(lista,raiz);
       let n=0;
